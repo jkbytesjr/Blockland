@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Player } from './player.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -45,10 +46,28 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Game loop: slowly orbit the camera for now
-renderer.setAnimationLoop((t) => {
-  const a = t * 0.0001;
-  camera.position.set(Math.cos(a) * 30, 15, Math.sin(a) * 30);
-  camera.lookAt(0, 0, 0);
+// The flat grid occupies y = 0 for |x|,|z| < SIZE/2
+const isSolid = (x, y, z) => y === 0 && Math.abs(x + 0.5) < SIZE / 2 && Math.abs(z + 0.5) < SIZE / 2;
+const player = new Player(camera, renderer.domElement, isSolid);
+player.respawn = () => { player.position.set(0.5, 5, 0.5); player.velocity.set(0, 0, 0); };
+player.respawn();
+
+// Show the start overlay whenever the pointer is not locked
+const overlay = document.getElementById('overlay');
+overlay.addEventListener('click', () => renderer.domElement.requestPointerLock());
+player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'flex'; };
+
+// Dev-only hook for automated checks
+if (import.meta.env.DEV) {
+  window.__game = { player, scene };
+  window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
+}
+
+// Game loop
+let last = performance.now();
+renderer.setAnimationLoop((now) => {
+  const dt = (now - last) / 1000;
+  last = now;
+  player.update(dt);
   renderer.render(scene, camera);
 });
