@@ -1,9 +1,23 @@
 import { BLOCK } from './blocks.js';
+import { foodValue, foodHeal, ITEM } from './items.js';
 
 export const MAX_HEALTH = 20; // ten hearts
 const REGEN_DELAY = 5; // seconds after getting hurt before healing starts
 const REGEN_EVERY = 3; // seconds per health point healed
 const SAFE_FALL = 3; // blocks you can fall without getting hurt
+
+// Hunger: 20 points (ten drumsticks). Activity adds "exhaustion"; every 4
+// points of it costs one hunger point. Healing needs a fairly full stomach and
+// costs food; an empty stomach hurts.
+export const MAX_HUNGER = 20;
+const EXHAUSTION_PER_POINT = 4;
+const EXHAUST_IDLE = 0.04; // per second, just from being alive
+const EXHAUST_SPRINT = 0.5; // extra per second while sprinting
+const EXHAUST_JUMP = 0.15;
+const HEAL_MIN_HUNGER = 14; // no healing below this
+const HEAL_COST = 1.5; // exhaustion per health point healed
+const SPRINT_MIN_HUNGER = 7; // too hungry to sprint below this
+const STARVE_EVERY = 4; // seconds per damage point at zero hunger
 
 // What a fresh creative hotbar holds
 const CREATIVE_START = [
@@ -11,7 +25,7 @@ const CREATIVE_START = [
   BLOCK.LOG, BLOCK.BRICKS, BLOCK.SAND, BLOCK.GRAVEL,
 ].map((id) => ({ id, count: 1 }));
 
-// Survival or creative, plus the player's health.
+// Survival or creative, plus the player's health and hunger.
 // Survival: mine blocks to collect them, craft, take damage, die.
 // Creative: every item, instant breaking, flying, no damage.
 // Each mode keeps its own inventory, swapped in when switching.
@@ -25,10 +39,14 @@ export class GameMode {
     this.dead = false;
     this.sinceHurt = Infinity;
     this.regenTimer = 0;
+    this.hunger = MAX_HUNGER;
+    this.exhaustion = 0;
+    this.starveTimer = 0;
     this.stash = { survival: [], creative: CREATIVE_START }; // inventory of the other mode
     this.onDeath = () => {};
     this.onHurt = () => {};
     player.onLand = (blocks) => this.damage(Math.floor(blocks - SAFE_FALL));
+    player.onJump = () => this.exhaust(EXHAUST_JUMP);
     this.apply();
   }
 
@@ -49,6 +67,31 @@ export class GameMode {
     this.player.canFly = this.creative;
     if (!this.creative) this.player.setFlying(false);
     this.hud.setHealth(this.creative ? null : this.health);
+    this.hud.setHunger(this.creative ? null : this.hunger);
+  }
+
+  // Use up some energy (running, jumping, mining, fighting)
+  exhaust(amount) {
+    if (this.creative || this.dead) return;
+    this.exhaustion += amount;
+    while (this.exhaustion >= EXHAUSTION_PER_POINT) {
+      this.exhaustion -= EXHAUSTION_PER_POINT;
+      this.hunger = Math.max(0, this.hunger - 1);
+      this.hud.setHunger(this.hunger);
+    }
+  }
+
+  // Can the held item be eaten right now?
+  canEat(id) {
+    if (this.creative || this.dead || !foodValue(id)) return false;
+    return this.hunger < MAX_HUNGER || id === ITEM.GOLDEN_APPLE;
+  }
+
+  eat(id) {
+    this.hunger = Math.min(MAX_HUNGER, this.hunger + foodValue(id));
+    this.health = Math.min(MAX_HEALTH, this.health + foodHeal(id));
+    this.hud.setHunger(this.hunger);
+    this.hud.setHealth(this.health);
   }
 
   damage(amount) {
@@ -68,18 +111,34 @@ export class GameMode {
   respawn() {
     this.dead = false;
     this.health = MAX_HEALTH;
-    this.hud.setHealth(this.health);
+    this.hunger = MAX_HUNGER;
+    this.exhaustion = 0;
+    this.apply();
     this.player.respawn();
   }
 
-  // Slowly heal when not hurt for a while
+  // Hunger drains with activity; heal slowly when fed and not hurt lately
   update(dt) {
     this.sinceHurt += dt;
-    if (this.creative || this.dead || this.health >= MAX_HEALTH || this.sinceHurt < REGEN_DELAY) return;
+    this.player.canSprint = this.creative || this.hunger >= SPRINT_MIN_HUNGER;
+    if (this.creative || this.dead) return;
+    const moving = Math.hypot(this.player.velocity.x, this.player.velocity.z) > 0.1;
+    this.exhaust(dt * (EXHAUST_IDLE + (this.player.sprinting && moving ? EXHAUST_SPRINT : 0)));
+
+    if (this.hunger === 0) {
+      this.starveTimer += dt;
+      if (this.starveTimer >= STARVE_EVERY) {
+        this.starveTimer = 0;
+        if (this.health > 1) this.damage(1); // starving never quite kills
+      }
+      return;
+    }
+    if (this.health >= MAX_HEALTH || this.hunger < HEAL_MIN_HUNGER || this.sinceHurt < REGEN_DELAY) return;
     this.regenTimer += dt;
     if (this.regenTimer >= REGEN_EVERY) {
       this.regenTimer = 0;
       this.health++;
+      this.exhaust(HEAL_COST);
       this.hud.setHealth(this.health);
     }
   }
@@ -87,7 +146,7 @@ export class GameMode {
   toJSON() {
     const other = this.creative ? 'survival' : 'creative';
     const slots = (list) => list.map((s) => (s ? [s.id, s.count] : 0));
-    return { mode: this.mode, health: this.health, inventory: this.inventory.toJSON(), [`${other}Inventory`]: slots(this.stash[other]) };
+    return { mode: this.mode, health: this.health, hunger: this.hunger, inventory: this.inventory.toJSON(), [`${other}Inventory`]: slots(this.stash[other]) };
   }
 
   load(data) {
@@ -98,6 +157,7 @@ export class GameMode {
     if (data[`${other}Inventory`]) this.stash[other] = read(data[`${other}Inventory`]);
     this.inventory.load(read(data.inventory));
     this.health = Math.max(1, Math.min(MAX_HEALTH, data.health ?? MAX_HEALTH));
+    this.hunger = Math.max(0, Math.min(MAX_HUNGER, data.hunger ?? MAX_HUNGER));
     this.apply();
   }
 }

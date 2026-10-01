@@ -31,11 +31,13 @@ export class Hud {
       <div id="mining"><div></div></div>
       <div id="block-name"></div>
       <div id="hearts"></div>
+      <div id="hunger"></div>
       <div id="hotbar"></div>
       <div id="hurt"></div>`;
     document.body.appendChild(root);
     this.nameEl = root.querySelector('#block-name');
     this.heartsEl = root.querySelector('#hearts');
+    this.hungerEl = root.querySelector('#hunger');
     this.miningEl = root.querySelector('#mining');
     this.hurtEl = root.querySelector('#hurt');
 
@@ -98,6 +100,22 @@ export class Hud {
       html += `<span class="heart ${hp >= 2 ? 'full' : hp === 1 ? 'half' : 'empty'}"></span>`;
     }
     this.heartsEl.innerHTML = html;
+  }
+
+  // Ten drumsticks for 20 hunger points, filling from the right; null hides them
+  setHunger(hunger, max = 20) {
+    if (hunger === null) {
+      this.hungerEl.style.display = 'none';
+      return;
+    }
+    this.hungerEl.style.display = 'flex';
+    let html = '';
+    for (let i = 0; i < max / 2; i++) {
+      const left = hunger - i * 2;
+      html += `<span class="food ${left >= 2 ? 'full' : left === 1 ? 'half' : 'empty'}"></span>`;
+    }
+    this.hungerEl.innerHTML = html;
+    this.hungerEl.classList.toggle('low', hunger <= 6);
   }
 
   // Mining progress 0..1 (0 hides the bar)

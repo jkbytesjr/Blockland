@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 const REACH = 6; // how far away the player can target blocks
+const EAT_TIME = 1.2; // seconds of holding right click to eat
 
 // Walks the voxel grid along a ray (Amanatides & Woo) and returns the first
 // solid block hit plus the face normal it was entered through, or null.
@@ -81,6 +82,12 @@ export class BlockEditor {
     this.onSound = () => {}; // ('break' | 'place' | 'step', block id)
     this.tryAttack = () => false; // hit a mob instead? true if one was hit
     this.onProgress = () => {}; // mining progress 0..1
+    this.canEat = () => false; // (held item id) can it be eaten now?
+    this.onEaten = () => {}; // the held food was eaten
+    this.onSwing = () => {}; // the hand swings (hit, break, place)
+
+    this.eating = false; // right button held on food
+    this.eatProgress = 0;
 
     this.mining = false; // left button held
     this.progress = 0;
@@ -95,6 +102,7 @@ export class BlockEditor {
       if (!this.player.locked) return;
       down = { x: e.clientX, y: e.clientY };
       if (e.button === 0) this.startMining();
+      else if (e.button === 2 && this.canEat(this.heldItem())) this.startEating();
       else if (e.button === 2 && !this.player.dragMode) this.placeBlock();
     });
     document.addEventListener('mousemove', (e) => {
@@ -102,6 +110,11 @@ export class BlockEditor {
     });
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) this.stopMining();
+      if (e.button === 2 && this.eating) {
+        this.stopEating();
+        down = null;
+        return;
+      }
       const still = down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6;
       if (e.button === 2 && this.player.dragMode && this.player.locked && still) this.placeBlock();
       down = null;
@@ -109,7 +122,30 @@ export class BlockEditor {
     document.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
+  startEating() {
+    this.eating = true;
+    this.eatProgress = 0;
+  }
+
+  stopEating() {
+    this.eating = false;
+    this.eatProgress = 0;
+  }
+
+  // Eating takes a moment of holding right click, with chewing sounds
+  updateEating(dt) {
+    if (!this.player.locked || !this.canEat(this.heldItem())) return this.stopEating();
+    const before = this.eatProgress;
+    this.eatProgress += dt / EAT_TIME;
+    if (Math.floor(before * 5) !== Math.floor(this.eatProgress * 5)) this.onSound('eat', 0);
+    if (this.eatProgress >= 1) {
+      this.eatProgress = 0;
+      this.onEaten();
+    }
+  }
+
   startMining() {
+    this.onSwing();
     if (this.tryAttack()) return;
     this.mining = true;
     this.progress = 0;
@@ -125,6 +161,7 @@ export class BlockEditor {
 
   // Survival mining: progress builds while the button stays on one block
   update(dt) {
+    if (this.eating) this.updateEating(dt);
     if (!this.mining || !this.player.locked || this.creative()) return;
     const target = this.selector.target;
     if (!target) return this.onProgress((this.progress = 0));
@@ -139,6 +176,7 @@ export class BlockEditor {
     this.hitTimer -= dt;
     if (this.hitTimer <= 0) {
       this.hitTimer = 0.25;
+      this.onSwing();
       this.onSound('step', id); // tapping sound while mining
     }
     if (this.progress >= 1) {
@@ -174,6 +212,7 @@ export class BlockEditor {
     const dirty = this.world.setBlock(x, y, z, id);
     if (!dirty.length) return false; // outside the world
     this.onSound('place', id);
+    this.onSwing();
     this.onChange(dirty);
     this.onPlaced();
     this.selector.update();

@@ -67,9 +67,10 @@ export class Sounds {
     return this.ctx && this.ctx.state === 'running' && !this.muted;
   }
 
-  // Play the break, place or step sound for a block id
+  // Play the break, place or step sound for a block id ('eat' for chewing)
   block(kind, id) {
     if (!this.ready) return;
+    if (kind === 'eat') return this.chew();
     const material = MATERIALS[BLOCK_MATERIAL[id] ?? 'stone'];
     const { duration, gain, thump } = KINDS[kind];
     const t = this.ctx.currentTime;
@@ -77,6 +78,11 @@ export class Sounds {
     const vary = 0.85 + Math.random() * 0.3;
     this.noiseBurst(t, duration, material.filter, material.freq * vary, material.q, gain);
     if (material.thump && thump) this.tone(t, duration * 0.8, material.thump * vary, gain * thump);
+  }
+
+  chew() {
+    const t = this.ctx.currentTime;
+    this.noiseBurst(t, 0.07, 'bandpass', 1400 + Math.random() * 600, 1.5, 0.35);
   }
 
   // A short low grunt when the player gets hurt

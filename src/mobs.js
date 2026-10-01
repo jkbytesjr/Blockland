@@ -246,6 +246,7 @@ export class Mobs {
     }
     if (!best) return false;
     best.health -= attackDamage(heldItem);
+    this.game.exhaust(0.1);
     best.hurtTime = 0.25;
     this.sounds.hit?.();
     // Knock it back, away from the player
@@ -254,8 +255,11 @@ export class Mobs {
     if (best.health <= 0) {
       this.remove(best);
       this.sounds.poof?.();
-      // Sometimes leaves something useful behind
-      if (!this.game.creative && Math.random() < 0.4) this.inventory.add(Math.random() < 0.7 ? ITEM.COAL : ITEM.IRON_INGOT);
+      // Often leaves meat behind, sometimes coal or iron
+      if (!this.game.creative) {
+        if (Math.random() < 0.5) this.inventory.add(ITEM.RAW_MEAT);
+        if (Math.random() < 0.25) this.inventory.add(Math.random() < 0.7 ? ITEM.COAL : ITEM.IRON_INGOT);
+      }
     }
     return true;
   }

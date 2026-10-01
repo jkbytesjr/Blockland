@@ -92,6 +92,14 @@ editor.onBroken = (id, held) => {
   if (game.creative) return;
   const drop = blockDrop(id, held);
   if (drop) inventory.add(drop);
+  game.exhaust(0.05);
+};
+// Survival: hold right click with food to eat it
+editor.canEat = (id) => game.canEat(id);
+editor.onEaten = () => {
+  game.eat(hud.selectedItem());
+  inventory.takeOne(hud.selected);
+  sounds.block('place', 6); // a satisfied gulp
 };
 editor.onPlaced = () => {
   if (!game.creative) inventory.takeOne(hud.selected);

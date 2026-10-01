@@ -76,7 +76,14 @@
       }
       #hotbar .slot.active { border-color: #fff; background: rgba(255, 255, 255, 0.18); }
       #hotbar .slot .num { position: absolute; left: 3px; top: 1px; color: #fff; font-size: 11px; text-shadow: 0 1px 2px #000; }
-      #hearts { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); display: flex; gap: 2px; }
+      /* Hearts over the left half of the hotbar, hunger over the right half */
+      #hearts { position: absolute; left: calc(50% - 232px); bottom: 72px; display: flex; gap: 2px; }
+      #hunger { position: absolute; right: calc(50% - 232px); bottom: 72px; display: flex; flex-direction: row-reverse; gap: 2px; }
+      .food { width: 16px; height: 16px; background: #3b2a16; clip-path: polygon(30% 0, 75% 0, 100% 25%, 100% 60%, 70% 75%, 45% 70%, 30% 85%, 35% 100%, 10% 100%, 0 85%, 10% 70%, 20% 55%, 10% 30%); }
+      .food.full { background: #c8792e; }
+      .food.half { background: linear-gradient(270deg, #c8792e 50%, #3b2a16 50%); }
+      #hunger.low .food { animation: shake 0.5s infinite; }
+      @keyframes shake { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
       .heart { width: 16px; height: 16px; background: #3a0d0d; clip-path: polygon(50% 100%, 0 40%, 0 15%, 15% 0, 35% 0, 50% 18%, 65% 0, 85% 0, 100% 15%, 100% 40%); }
       .heart.full { background: #e8282f; }
       .heart.half { background: linear-gradient(90deg, #e8282f 50%, #3a0d0d 50%); }
@@ -104,7 +111,7 @@
       <div>WASD move · Shift or double-tap W sprint · Space jump · Esc menu</div>
       <div>Hold left click mine · Right click place · 1-9 / scroll pick · E inventory &amp; crafting</div>
       <div>Creative: double-tap Space to fly, C to go down · T skip time · M mute</div>
-      <div class="small">Mobs come out at night in survival. Your world is saved in this browser.</div>
+      <div class="small">Survival: hold right click to eat. Mobs come out at night. Your world is saved in this browser.</div>
       <button id="reset">New world</button>
     </div>
     <div id="inventory" class="panel">

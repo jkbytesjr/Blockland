@@ -40,6 +40,8 @@ export class Player {
     this.inWater = false;
     this.isWater = () => false; // set by the game: is (x, y, z) a water block?
     this.sprinting = false;
+    this.canSprint = true; // false when too hungry
+    this.onJump = null;
     this.knock = new THREE.Vector3(); // knockback velocity from hits, fades quickly
     this.canFly = false; // creative mode
     this.flying = false;
@@ -168,7 +170,7 @@ export class Player {
 
     // Sprint while moving forward with Shift held or after a double-tapped W
     if (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight')) this.sprinting = true;
-    if (forward <= 0) this.sprinting = false;
+    if (forward <= 0 || !this.canSprint || this.inWater) this.sprinting = false;
 
     let speed = this.flying ? FLY_SPEED : this.inWater ? WALK_SPEED * WATER_WALK : WALK_SPEED;
     if (this.sprinting) speed *= SPRINT_FACTOR;
@@ -187,6 +189,7 @@ export class Player {
       if (this.keys.has('Space') && this.onGround) {
         this.velocity.y = JUMP_SPEED;
         this.onGround = false;
+        this.onJump?.();
       }
       this.velocity.y -= GRAVITY * dt;
       this.velocity.y = Math.max(this.velocity.y, -MAX_FALL_SPEED);

@@ -55,6 +55,27 @@ const PAINTERS = {
     }
   },
 };
+// Apples: a round fruit with a stem and a leaf
+for (const [id, color] of [[ITEM.APPLE, [214, 40, 40]], [ITEM.GOLDEN_APPLE, [250, 205, 50]]]) {
+  PAINTERS[id] = (px) => {
+    for (let y = 5; y < 15; y++) for (let x = 3; x < 14; x++) {
+      const d = Math.hypot(x - 8, (y - 9.5) * 1.1);
+      if (d < 5.2) px(x, y, rgb(color, x < 7 && y < 9 ? 1.25 : d > 4.2 ? 0.75 : 1));
+    }
+    line(px, 8, 2, 8, 5, [90, 60, 30], 1);
+    px(9, 3, rgb([60, 150, 50]));
+    px(10, 3, rgb([60, 150, 50]));
+  };
+}
+// Meat: a slab with a stripe of fat and a bone end
+for (const [id, color] of [[ITEM.RAW_MEAT, [214, 100, 110]], [ITEM.COOKED_MEAT, [140, 80, 45]]]) {
+  PAINTERS[id] = (px) => {
+    for (let y = 4; y < 13; y++) for (let x = 3; x < 13; x++) {
+      if (Math.hypot(x - 7.5, (y - 8) * 1.3) < 5.5) px(x, y, rgb(color, (x + y) % 4 === 0 ? 1.2 : 1));
+    }
+    line(px, 11, 11, 14, 14, [235, 230, 215]);
+  };
+}
 // Ingots: a bar seen from the side
 for (const [id, color] of [[ITEM.IRON_INGOT, [225, 225, 225]], [ITEM.GOLD_INGOT, [250, 215, 60]]]) {
   PAINTERS[id] = (px) => {

@@ -16,6 +16,10 @@ export const ITEM = {
   STONE_SWORD: 121,
   IRON_SWORD: 122,
   DIAMOND_SWORD: 123,
+  APPLE: 130,
+  RAW_MEAT: 131,
+  COOKED_MEAT: 132,
+  GOLDEN_APPLE: 133,
 };
 
 export const MAX_STACK = 64;
@@ -32,6 +36,11 @@ const INFO = {
   [ITEM.IRON_INGOT]: { name: 'Iron Ingot' },
   [ITEM.GOLD_INGOT]: { name: 'Gold Ingot' },
   [ITEM.DIAMOND]: { name: 'Diamond' },
+  // Food: hunger points restored (out of 20), and health for golden apples
+  [ITEM.APPLE]: { name: 'Apple', food: 4 },
+  [ITEM.RAW_MEAT]: { name: 'Raw Meat', food: 3 },
+  [ITEM.COOKED_MEAT]: { name: 'Cooked Meat', food: 8 },
+  [ITEM.GOLDEN_APPLE]: { name: 'Golden Apple', food: 4, heal: 8 },
 };
 for (let tier = 1; tier <= 4; tier++) {
   INFO[ITEM.WOOD_PICKAXE + tier - 1] = { name: `${TIER_NAMES[tier]} Pickaxe`, pickaxe: tier, stack: 1 };
@@ -48,6 +57,10 @@ export function maxStack(id) {
   return INFO[id]?.stack ?? MAX_STACK;
 }
 
+// Hunger points a food restores, health it heals (0 if not food)
+export const foodValue = (id) => INFO[id]?.food ?? 0;
+export const foodHeal = (id) => INFO[id]?.heal ?? 0;
+
 // Pickaxe tier of an item (0 if it isn't one)
 export const pickaxeTier = (id) => INFO[id]?.pickaxe ?? 0;
 
@@ -61,7 +74,7 @@ const MINING = {
   [BLOCK.DIRT]: { time: 0.5 },
   [BLOCK.SAND]: { time: 0.5 },
   [BLOCK.GRAVEL]: { time: 0.6 },
-  [BLOCK.LEAVES]: { time: 0.25, drop: 0, rareDrop: ITEM.STICK },
+  [BLOCK.LEAVES]: { time: 0.25, drop: 0, rareDrops: [ITEM.STICK, ITEM.APPLE] },
   [BLOCK.LOG]: { time: 2 },
   [BLOCK.PLANKS]: { time: 2 },
   [BLOCK.STONE]: { time: 6, tier: 1, drop: BLOCK.COBBLESTONE },
@@ -87,7 +100,8 @@ export function breakTime(blockId, heldId) {
 export function blockDrop(blockId, heldId) {
   const info = MINING[blockId] ?? {};
   if (info.tier && pickaxeTier(heldId) < info.tier) return 0; // wrong tool
-  if (info.rareDrop && Math.random() < 0.15) return info.rareDrop;
+  // Leaves: now and then a stick or an apple
+  if (info.rareDrops) return Math.random() < 0.25 ? info.rareDrops[Math.floor(Math.random() * info.rareDrops.length)] : 0;
   return info.drop ?? blockId;
 }
 
