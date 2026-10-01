@@ -49,8 +49,9 @@ loader.loadAll(player.position.x, player.position.z);
 // Block targeting with a wireframe highlight
 const selector = new BlockSelector(scene, camera, world);
 
-// Left click breaks, right click places; only touched chunks are re-meshed
-const editor = new BlockEditor(world, selector, player, (keys) => keys.forEach((k) => chunkMeshes.has(k) && chunkMeshes.build(k)));
+// Left click breaks, right click places; touched chunks are marked dirty and
+// rebuilt once at the end of the frame
+const editor = new BlockEditor(world, selector, player, (keys) => chunkMeshes.markDirty(keys));
 
 // Crosshair and hotbar; the selected slot is what right click places
 const hud = new Hud(atlas.image, () => player.locked);
@@ -70,7 +71,7 @@ player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'f
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
   window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud };
-  window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
+  window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, builds: chunkMeshes.builds, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
 // Game loop
@@ -81,5 +82,6 @@ renderer.setAnimationLoop((now) => {
   loader.update(player.position.x, player.position.z);
   player.update(dt);
   selector.update();
+  chunkMeshes.flush();
   renderer.render(scene, camera);
 });
