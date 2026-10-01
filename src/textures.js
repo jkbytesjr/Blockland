@@ -11,6 +11,12 @@ export const TILE = {
   DIRT: 2,
   STONE: 3,
   SAND: 4,
+  COBBLESTONE: 5,
+  PLANKS: 6,
+  LOG_SIDE: 7,
+  LOG_TOP: 8,
+  BRICKS: 9,
+  GRAVEL: 10,
 };
 
 // Fill a tile pixel by pixel; `color(x, y, rand)` returns [r, g, b] in 0-255
@@ -37,6 +43,66 @@ const GRASS = [96, 166, 62];
 const DIRT = [134, 94, 60];
 const STONE = [128, 128, 128];
 const SAND = [219, 205, 146];
+const WOOD = [168, 128, 78];
+const BARK = [102, 76, 46];
+const BRICK = [158, 74, 56];
+const MORTAR = [190, 182, 170];
+
+// Cobblestone: rounded stones from a wrapping Voronoi pattern, dark mortar between
+function cobblePainter() {
+  const rand = mulberry32(21);
+  // One stone center jittered inside each cell of a 3x3 grid keeps stones evenly sized
+  const cell = TILE_SIZE / 3;
+  const seeds = [];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      seeds.push({ x: (i + 0.2 + rand() * 0.6) * cell, y: (j + 0.2 + rand() * 0.6) * cell, f: 0.85 + rand() * 0.3 });
+    }
+  }
+  const wrap = (d) => Math.min(Math.abs(d), TILE_SIZE - Math.abs(d)); // so the tile repeats seamlessly
+  return (x, y, r) => {
+    let d1 = Infinity, d2 = Infinity, f = 1;
+    for (const s of seeds) {
+      const d = Math.hypot(wrap(x + 0.5 - s.x), wrap(y + 0.5 - s.y));
+      if (d < d1) { d2 = d1; d1 = d; f = s.f; } else if (d < d2) d2 = d;
+    }
+    if (d2 - d1 < 0.8) return shade(STONE, 0.55);
+    return shade(STONE, f * (0.92 + r() * 0.16) - d1 * 0.02);
+  };
+}
+
+// Planks: four horizontal boards with staggered end seams and faint grain
+const plankPixel = (x, y, r) => {
+  const board = y >> 2;
+  if (y % 4 === 3 || x === (board * 5 + 3) % TILE_SIZE) return shade(WOOD, 0.62);
+  return shade(WOOD, 0.9 + ((x * 7 + board * 3) % 5) * 0.03 + r() * 0.06);
+};
+
+// Log side: vertical bark ridges
+const barkStripes = Array.from({ length: TILE_SIZE }, (_, i) => 0.75 + ((i * 5) % 7) * 0.06);
+const logSidePixel = (x, y, r) => shade(BARK, barkStripes[x] * (0.9 + r() * 0.2));
+
+// Log top: growth rings inside a ring of bark
+const logTopPixel = (x, y, r) => {
+  const d = Math.hypot(x - 7.5, y - 7.5);
+  if (d > 6.8) return logSidePixel(x, y, r);
+  return shade(WOOD, (Math.floor(d * 0.9) % 2 ? 0.82 : 1.0) * (0.95 + r() * 0.08));
+};
+
+// Bricks: rows of four pixels, every other row offset by half a brick
+const brickPixel = (x, y, r) => {
+  const row = y >> 2;
+  if (y % 4 === 3 || (x + (row % 2) * 4) % 8 === 7) return shade(MORTAR, 0.9 + r() * 0.1);
+  return shade(BRICK, 0.88 + r() * 0.18);
+};
+
+// Gravel: a mix of gray and brownish pebbles
+const gravelPixel = (x, y, r) => {
+  const v = r();
+  if (v < 0.25) return shade([120, 110, 100], 0.7 + r() * 0.2);
+  if (v < 0.4) return shade([150, 140, 130], 1.0 + r() * 0.1);
+  return shade(STONE, 0.78 + r() * 0.3);
+};
 
 const grassPixel = (rand) => shade(GRASS, 0.82 + rand() * 0.3);
 const dirtPixel = (rand) => {
@@ -79,6 +145,13 @@ export function createAtlasTexture() {
   paintTile(ctx, TILE.SAND, 15, (x, y, rand) =>
     rand() < 0.07 ? shade(SAND, 0.82) : shade(SAND, 0.95 + rand() * 0.08)
   );
+
+  paintTile(ctx, TILE.COBBLESTONE, 16, cobblePainter());
+  paintTile(ctx, TILE.PLANKS, 17, plankPixel);
+  paintTile(ctx, TILE.LOG_SIDE, 18, logSidePixel);
+  paintTile(ctx, TILE.LOG_TOP, 19, logTopPixel);
+  paintTile(ctx, TILE.BRICKS, 20, brickPixel);
+  paintTile(ctx, TILE.GRAVEL, 22, gravelPixel);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter;

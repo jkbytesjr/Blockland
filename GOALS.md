@@ -12,7 +12,7 @@ without errors. Tick the box when done.
 - [x] 6. Raycast block selection with a wireframe highlight
 - [x] 7. Left-click breaks a block, right-click places the selected block
 - [x] 8. AABB collision so the player cannot walk through blocks
-- [ ] 9. Hotbar UI (keys 1-9 / scroll wheel) and crosshair
+- [x] 9. Hotbar UI (keys 1-9 / scroll wheel) and crosshair
 ## Milestone 4: Big world
 - [ ] 10. Infinite world: load/unload chunks around the player
 - [ ] 11. Only rebuild the meshes of chunks that changed
@@ -30,7 +30,8 @@ without errors. Tick the box when done.
   sub-steps so fast falls can't tunnel. No auto step-up: jump onto ledges.
 - The world is a fixed 8x8 chunk square (WORLD_RADIUS in src/main.js); goal 10
   replaces that with streaming chunks.
-- Atlas has 16 tile slots (src/textures.js), 5 used; add tiles to TILE and BLOCK_TEXTURES.
+- Atlas has 16 tile slots (src/textures.js), 11 used; add tiles to TILE and BLOCK_TEXTURES.
+- Nine block types, all on the hotbar (HOTBAR_BLOCKS in src/ui.js); names in BLOCK_NAMES.
 - `window.__game` / `window.__debug` are exposed in dev only for automated checks.
 - Edits re-mesh only the touched chunk plus a neighbor when the block is on a
   chunk border (`World.setBlock` returns the keys, `ChunkMeshes.build` rebuilds);

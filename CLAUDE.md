@@ -16,6 +16,7 @@ game: use our own name, textures and assets, not Mojang's.
 - `src/main.js`: renderer, scene, game loop, wiring
 - `src/world.js`: chunk storage, terrain generation, block get/set
 - `src/mesher.js`: builds chunk meshes (only faces touching air)
+- `src/chunkMeshes.js`: one Three.js mesh per chunk, rebuilt on demand
 - `src/player.js`: first-person controls, gravity, AABB collision
 - `src/interaction.js`: raycasting, break/place blocks
 - `src/ui.js`: hotbar, crosshair, HUD

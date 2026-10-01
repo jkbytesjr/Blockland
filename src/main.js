@@ -4,7 +4,7 @@ import { World } from './world.js';
 import { ChunkMeshes } from './chunkMeshes.js';
 import { createAtlasTexture } from './textures.js';
 import { BlockSelector, BlockEditor } from './interaction.js';
-import { BLOCK } from './blocks.js';
+import { Hud } from './ui.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -29,7 +29,8 @@ scene.add(sun);
 // World: a fixed square of chunks around the origin (infinite comes later)
 const WORLD_RADIUS = 4; // chunks in each direction from the center
 const world = new World();
-const material = new THREE.MeshLambertMaterial({ map: createAtlasTexture(), vertexColors: true });
+const atlas = createAtlasTexture();
+const material = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true });
 for (let cx = -WORLD_RADIUS; cx < WORLD_RADIUS; cx++) {
   for (let cz = -WORLD_RADIUS; cz < WORLD_RADIUS; cz++) world.generateChunk(cx, cz);
 }
@@ -51,7 +52,10 @@ const selector = new BlockSelector(scene, camera, world);
 
 // Left click breaks, right click places; only touched chunks are re-meshed
 const editor = new BlockEditor(world, selector, player, (keys) => keys.forEach((k) => chunkMeshes.build(k)));
-editor.selectedBlock = () => BLOCK.DIRT;
+
+// Crosshair and hotbar; the selected slot is what right click places
+const hud = new Hud(atlas.image, () => player.locked);
+editor.selectedBlock = () => hud.selectedBlock();
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -66,7 +70,7 @@ player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'f
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, hud };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
