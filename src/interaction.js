@@ -77,7 +77,7 @@ export class BlockEditor {
     this.heldItem = () => 0; // item id in the selected hotbar slot
     this.creative = () => false;
     this.breakTime = () => 1; // seconds to break (block id, held item id)
-    this.onBroken = () => {}; // (block id, held item id), for drops
+    this.onBroken = () => {}; // (block id, held item id, x, y, z), for drops
     this.onPlaced = () => {}; // the held block was placed (use one up)
     this.onSound = () => {}; // ('break' | 'place' | 'step', block id)
     this.tryAttack = () => false; // hit a mob instead? true if one was hit
@@ -195,7 +195,7 @@ export class BlockEditor {
     const id = this.world.getBlock(x, y, z);
     this.onSound('break', id);
     this.onChange(this.world.setBlock(x, y, z, 0));
-    this.onBroken(id, this.heldItem());
+    this.onBroken(id, this.heldItem(), x, y, z);
     this.selector.update();
     return true;
   }

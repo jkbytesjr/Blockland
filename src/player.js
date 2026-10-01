@@ -43,6 +43,8 @@ export class Player {
     this.canSprint = true; // false when too hungry
     this.onJump = null;
     this.knock = new THREE.Vector3(); // knockback velocity from hits, fades quickly
+    this.bobPhase = 0; // view bobbing while walking
+    this.shake = 0; // camera tilt when hurt, fades out
     this.canFly = false; // creative mode
     this.flying = false;
     this.fallStart = null; // highest point of the current fall, for fall damage
@@ -225,7 +227,14 @@ export class Player {
     // Fell off the world: respawn above it
     if (this.position.y < -30) this.respawn?.();
 
-    this.camera.position.set(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
+    // View bobbing: the head rises and falls a little with each step
+    const walking = Math.hypot(this.velocity.x, this.velocity.z);
+    if (this.onGround && walking > 0.1 && !this.flying) this.bobPhase += dt * walking * 1.6;
+    else this.bobPhase *= 0.9; // settle back
+    const bob = Math.abs(Math.sin(this.bobPhase)) * 0.06;
+    this.shake = Math.max(0, this.shake - dt * 3);
+
+    this.camera.position.set(this.position.x, this.position.y + EYE_HEIGHT + bob, this.position.z);
+    this.camera.rotation.set(this.pitch, this.yaw, Math.sin(this.bobPhase) * 0.004 + this.shake * 0.12);
   }
 }

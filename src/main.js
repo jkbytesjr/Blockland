@@ -11,6 +11,8 @@ import { GameMode } from './gameMode.js';
 import { Screens } from './screens.js';
 import { breakTime, blockDrop } from './items.js';
 import { Mobs } from './mobs.js';
+import { Hand } from './hand.js';
+import { Particles } from './particles.js';
 import { SaveManager } from './save.js';
 import { DayNight } from './sky.js';
 import { Sounds } from './sound.js';
@@ -74,7 +76,10 @@ const selector = new BlockSelector(scene, camera, world);
 
 // Sound effects for breaking, placing, footsteps, splashes and getting hurt
 const sounds = new Sounds();
-game.onHurt = () => sounds.hurt();
+game.onHurt = () => {
+  sounds.hurt();
+  player.shake = 1;
+};
 
 // Left button breaks, right click places; touched chunks are marked dirty and
 // rebuilt once at the end of the frame
@@ -88,7 +93,12 @@ editor.breakTime = breakTime;
 editor.onSound = (kind, id) => sounds.block(kind, id);
 editor.onProgress = (p) => hud.setProgress(p);
 // Survival: broken blocks go into the inventory, placed ones are used up
-editor.onBroken = (id, held) => {
+// Held item in view, and bits of block flying when one breaks
+const hand = new Hand(atlas);
+const particles = new Particles(scene, atlas.image);
+editor.onSwing = () => hand.doSwing();
+editor.onBroken = (id, held, x, y, z) => {
+  particles.burst(x, y, z, id);
   if (game.creative) return;
   const drop = blockDrop(id, held);
   if (drop) inventory.add(drop);
@@ -137,7 +147,7 @@ window.addEventListener('keydown', (e) => {
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky, sounds, inventory, game, screens, mobs };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky, sounds, inventory, game, screens, mobs, hand, particles };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, builds: chunkMeshes.builds, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
@@ -157,5 +167,14 @@ renderer.setAnimationLoop((now) => {
   game.update(Math.min(dt, 0.1));
   if (screens.state !== 'menu') mobs.update(dt); // the world pauses on the menu
   chunkMeshes.flush();
+  particles.update(Math.min(dt, 0.05), (x, y, z) => world.isSolid(x, y, z));
+  hand.update(Math.min(dt, 0.05), {
+    item: hud.selectedItem(),
+    speed: Math.hypot(player.velocity.x, player.velocity.z),
+    onGround: player.onGround,
+    eating: editor.eating,
+    brightness: hemi.intensity + sun.intensity * 0.4 + moon.intensity,
+  });
   renderer.render(scene, camera);
+  if (!game.dead) hand.render(renderer);
 });
