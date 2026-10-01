@@ -27,11 +27,16 @@ the sound effects.
 | M | Mute sound |
 | Esc | Release the mouse |
 
+## Play offline
+`npm run build` makes one self-contained file, `dist/index.html`. Double-click
+it to play without a server. The `index.html` in the repo root is the source
+page for the dev server and won't run on its own.
+
 ## Run it locally
 ```sh
 npm install
 npm run dev     # http://localhost:5173
-npm run build   # static files in dist/
+npm run build   # dist/index.html, a single file that runs anywhere
 ```
 
 Pushing to `main` deploys the game to GitHub Pages
