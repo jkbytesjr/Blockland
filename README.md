@@ -9,7 +9,11 @@ the sound effects.
 ## Features
 - Survival and creative modes
 - Survival: mine blocks by holding left click, collect them, craft tools,
-  watch your health, and fight off shamblers that come out at night
+  watch your health and hunger, eat food, and fight off shamblers that come
+  out at night
+- Food: apples from leaves, meat from mobs, cooked meat, golden apples
+- You see your hand and what you're holding, with swing, bob and eating
+  animations, and blocks burst into bits when broken
 - Creative: every block and item, instant breaking, and flying
 - Crafting: planks, sticks, wooden to diamond pickaxes and swords, ingots
 - Ores underground: coal, iron, gold and diamond
@@ -27,7 +31,7 @@ the sound effects.
 | Mouse | Look around |
 | Space | Jump / swim up |
 | Left click (hold) | Mine a block / hit a mob |
-| Right click | Place block |
+| Right click | Place block / hold to eat |
 | 1-9 / scroll wheel | Pick hotbar slot |
 | E | Inventory and crafting |
 | Double-tap Space | Fly (creative) |

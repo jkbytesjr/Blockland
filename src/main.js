@@ -22,6 +22,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+renderer.info.autoReset = false; // count both passes (world + hand) per frame
 
 // Scene with a sky color and distance fog
 // (colors are set every frame by the day/night cycle)
@@ -175,6 +176,7 @@ renderer.setAnimationLoop((now) => {
     eating: editor.eating,
     brightness: hemi.intensity + sun.intensity * 0.4 + moon.intensity,
   });
+  renderer.info.reset();
   renderer.render(scene, camera);
   if (!game.dead) hand.render(renderer);
 });

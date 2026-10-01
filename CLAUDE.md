@@ -29,6 +29,8 @@ game: use our own name, textures and assets, not Mojang's.
 - `src/crafting.js`: recipe book
 - `src/gameMode.js`: survival/creative, health
 - `src/mobs.js`: night mobs
+- `src/hand.js`: first-person hand and held item, with animations
+- `src/particles.js`: block-break particles
 - `src/sky.js`: day/night cycle (sun, moon, stars, sky/fog/light colors)
 - `src/sound.js`: synthesized sound effects (Web Audio, no files)
 - `src/noise.js`: simplex/perlin noise

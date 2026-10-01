@@ -79,6 +79,9 @@ without errors. Tick the box when done.
 - [x] Inventory (src/inventory.js, 36 slots, first 9 are the hotbar) and a
       recipe-book crafting screen on E (src/crafting.js, src/screens.js)
 - [x] Mobs at night (src/mobs.js)
+- [x] Hunger and food (src/gameMode.js; food values in src/items.js)
+- [x] Hand / held item view (src/hand.js) with animations, block-break
+      particles (src/particles.js), view bobbing and hurt tilt
 
 Notes:
 - Items (src/items.js): block items use the block id, other items are >= 100.
@@ -91,3 +94,10 @@ Notes:
   which. Mobs pause while the start menu is open.
 - Mobs: max 10, spawn at night 18-30 blocks away, chase within 24 blocks in
   survival only, 3 damage per hit, 12 health. Each is ~11 small meshes.
+- Hunger: 20 points drained by "exhaustion" (4 per point): idle 0.04/s,
+  sprinting +0.5/s, jump 0.15, block 0.05, hit 0.1, each healed point 1.5.
+  Heal needs >= 14, sprint needs >= 7, at 0 you take 1 damage per 4 s down
+  to 1 health. Eating: hold right click 1.2 s (`BlockEditor.eating`).
+- The hand is a second scene/camera drawn after the world with the depth
+  buffer cleared (`Hand.render`). renderer.info is reset once per frame so
+  `__debug().calls` counts both passes.
