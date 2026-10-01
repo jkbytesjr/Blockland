@@ -3,6 +3,7 @@ import { Player } from './player.js';
 import { World, CHUNK_SIZE } from './world.js';
 import { buildChunkGeometry } from './mesher.js';
 import { createAtlasTexture } from './textures.js';
+import { BlockSelector } from './interaction.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -47,6 +48,9 @@ player.respawn = () => {
 };
 player.respawn();
 
+// Block targeting with a wireframe highlight
+const selector = new BlockSelector(scene, camera, world);
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -60,8 +64,8 @@ player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'f
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world };
-  window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
+  window.__game = { player, scene, world, selector };
+  window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
 // Game loop
@@ -70,5 +74,6 @@ renderer.setAnimationLoop((now) => {
   const dt = (now - last) / 1000;
   last = now;
   player.update(dt);
+  selector.update();
   renderer.render(scene, camera);
 });

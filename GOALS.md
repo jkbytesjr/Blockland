@@ -9,7 +9,7 @@ without errors. Tick the box when done.
 - [x] 4. Face culling: only render faces that touch air
 - [x] 5. Block types: grass, dirt, stone, sand, with a procedural texture atlas
 ## Milestone 3: Play
-- [ ] 6. Raycast block selection with a wireframe highlight
+- [x] 6. Raycast block selection with a wireframe highlight
 - [ ] 7. Left-click breaks a block, right-click places the selected block
 - [ ] 8. AABB collision so the player cannot walk through blocks
 - [ ] 9. Hotbar UI (keys 1-9 / scroll wheel) and crosshair
