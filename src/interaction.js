@@ -74,12 +74,25 @@ export class BlockEditor {
     this.selectedBlock = () => 0;
     this.onSound = () => {}; // called with ('break' | 'place', block id)
 
+    // With a captured mouse, act on press. In drag mode a press may start a
+    // look-around drag, so act on release, and only if the mouse barely moved.
+    let down = null;
     document.addEventListener('mousedown', (e) => {
       if (!this.player.locked) return;
-      if (e.button === 0) this.breakBlock();
-      else if (e.button === 2) this.placeBlock();
+      if (this.player.dragMode) down = { x: e.clientX, y: e.clientY };
+      else this.click(e.button);
+    });
+    document.addEventListener('mouseup', (e) => {
+      if (!this.player.locked || !this.player.dragMode || !down) return;
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) this.click(e.button);
+      down = null;
     });
     document.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  click(button) {
+    if (button === 0) this.breakBlock();
+    else if (button === 2) this.placeBlock();
   }
 
   breakBlock() {

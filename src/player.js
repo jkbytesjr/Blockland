@@ -20,6 +20,7 @@ const WATER_WALK = 0.6;
 export class Player {
   constructor(camera, domElement, isSolid) {
     this.camera = camera;
+    this.domElement = domElement;
     this.isSolid = isSolid;
     this.position = new THREE.Vector3(0, 10, 0); // feet position
     this.velocity = new THREE.Vector3();
@@ -33,16 +34,23 @@ export class Player {
 
     camera.rotation.order = 'YXZ';
 
-    domElement.addEventListener('click', () => {
-      if (!this.locked) domElement.requestPointerLock();
-    });
+    // Drag mode: used when the browser won't capture the mouse (for example
+    // inside a sandboxed preview frame). Look around by dragging instead.
+    this.dragMode = false;
+
     document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === domElement;
-      if (!this.locked) this.keys.clear();
-      this.onLockChange?.(this.locked);
+      if (this.dragMode) return;
+      this.setLocked(document.pointerLockElement === domElement);
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape' && this.dragMode) {
+        this.dragMode = false;
+        this.setLocked(false);
+      }
     });
     document.addEventListener('mousemove', (e) => {
       if (!this.locked) return;
+      if (this.dragMode && !e.buttons) return; // only look while a button is held
       this.yaw -= e.movementX * MOUSE_SENSITIVITY;
       this.pitch -= e.movementY * MOUSE_SENSITIVITY;
       this.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.pitch));
@@ -52,6 +60,33 @@ export class Player {
       if (e.code === 'Space') e.preventDefault();
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
+  }
+
+  // Start playing: capture the mouse, or fall back to drag mode if the
+  // browser refuses (it can throw, reject its promise, or fire an error event)
+  start() {
+    if (this.locked) return;
+    const el = this.domElement;
+    const fallback = () => {
+      this.lockBlocked = true; // don't ask again: it fails the same way every time
+      if (this.locked) return;
+      this.dragMode = true;
+      this.setLocked(true);
+    };
+    if (!el.requestPointerLock || this.lockBlocked) return fallback();
+    document.addEventListener('pointerlockerror', fallback, { once: true });
+    try {
+      el.requestPointerLock()?.catch?.(fallback);
+    } catch {
+      fallback();
+    }
+  }
+
+  setLocked(locked) {
+    if (locked === this.locked) return;
+    this.locked = locked;
+    if (!locked) this.keys.clear();
+    this.onLockChange?.(locked);
   }
 
   // Does the player's body box overlap the unit block at (x, y, z)?

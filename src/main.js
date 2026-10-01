@@ -87,15 +87,19 @@ window.addEventListener('resize', () => {
 const overlay = document.getElementById('overlay');
 overlay.addEventListener('click', () => {
   sounds.unlock(); // audio may only start from a click
-  renderer.domElement.requestPointerLock();
+  player.start();
 });
+renderer.domElement.addEventListener('click', () => player.start());
 document.getElementById('reset').addEventListener('click', (e) => {
   e.stopPropagation(); // don't start playing
   if (!confirm('Start a new world? Your saved changes will be lost.')) return;
   saves.clear();
   location.reload();
 });
-player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'flex'; };
+player.onLockChange = (locked) => {
+  overlay.style.display = locked ? 'none' : 'flex';
+  document.body.classList.toggle('drag-mode', locked && player.dragMode);
+};
 
 // T skips ahead an eighth of a day, to see sunsets and nights sooner; M mutes
 window.addEventListener('keydown', (e) => {

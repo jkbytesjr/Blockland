@@ -67,3 +67,7 @@ without errors. Tick the box when done.
 - Sounds (src/sound.js) are synthesized with Web Audio: break/place/step per
   material, plus a splash. The AudioContext is created on the start-overlay
   click. M mutes.
+- Starting the game goes through `Player.start()`: it asks for pointer lock and
+  falls back to drag mode (`player.dragMode`: hold a button and drag to look,
+  click without dragging to break/place, Esc for the menu) when the browser
+  refuses, e.g. in a sandboxed preview iframe without allow-pointer-lock.
