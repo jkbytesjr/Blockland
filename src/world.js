@@ -12,6 +12,18 @@ export const WATER_LEVEL = 22; // air below this height is filled with water
 const TREE_CELL = 7;
 const LEAF_RADIUS = 2;
 
+// Ores grow in small veins: the underground is split into ORE_CELL cubes and
+// each cube may hold one vein, of a kind that depends on how deep it is.
+const ORE_CELL = 4;
+// [block, deepest y it starts at (exclusive), chance per cube, vein radius]
+// Rarer ores are checked first.
+const ORES = [
+  [BLOCK.DIAMOND_ORE, 12, 0.03, 1.0],
+  [BLOCK.GOLD_ORE, 18, 0.04, 1.2],
+  [BLOCK.IRON_ORE, 32, 0.08, 1.4],
+  [BLOCK.COAL_ORE, 44, 0.12, 1.6],
+];
+
 // Deterministic hash of two integers and a seed to a number in [0, 1)
 function hash2(x, z, seed) {
   let h = Math.imul(x, 374761393) ^ Math.imul(z, 668265263) ^ Math.imul(seed, 1442695041);
@@ -168,9 +180,35 @@ export class World {
     return BLOCK.LEAVES;
   }
 
+  // Ore at (x, y, z) if a vein reaches it, else stone
+  oreAt(x, y, z) {
+    const gx = Math.floor(x / ORE_CELL), gy = Math.floor(y / ORE_CELL), gz = Math.floor(z / ORE_CELL);
+    const r = hash2(gx * 7919 + gy, gz, this.seed + 101);
+    let chance = 0;
+    for (const [id, maxY, p, radius] of ORES) {
+      if (gy * ORE_CELL >= maxY) continue;
+      chance += p;
+      if (r >= chance) continue;
+      // Vein center somewhere inside the cube; ragged edge from a per-block hash
+      const cx = gx * ORE_CELL + 0.5 + hash2(gx, gy * 31 + gz, this.seed + 103) * (ORE_CELL - 1);
+      const cy = gy * ORE_CELL + 0.5 + hash2(gy, gz * 31 + gx, this.seed + 107) * (ORE_CELL - 1);
+      const cz = gz * ORE_CELL + 0.5 + hash2(gz, gx * 31 + gy, this.seed + 109) * (ORE_CELL - 1);
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy, z + 0.5 - cz);
+      if (d <= radius && hash2(x * 131 + y, z, this.seed + 113) < 0.8) return id;
+      return BLOCK.STONE;
+    }
+    return BLOCK.STONE;
+  }
+
+  // Generated block at (x, y, z) in a column whose surface is h, ores included
+  groundBlock(x, y, z, h) {
+    const block = World.columnBlock(h, y);
+    return block === BLOCK.STONE ? this.oreAt(x, y, z) : block;
+  }
+
   // Unedited block at world coordinates
   terrainBlock(x, y, z) {
-    const block = World.columnBlock(this.heightAt(x, z), y);
+    const block = this.groundBlock(x, y, z, this.heightAt(x, z));
     if (block !== BLOCK.AIR) return block;
     const tree = this.treeInCell(Math.floor(x / TREE_CELL), Math.floor(z / TREE_CELL));
     return tree ? World.treeBlock(tree, x, y, z) : BLOCK.AIR;
@@ -205,8 +243,9 @@ export class World {
     const chunk = new Chunk(cx, cz);
     for (let x = 0; x < CHUNK_SIZE; x++) {
       for (let z = 0; z < CHUNK_SIZE; z++) {
-        const h = this.heightAt(cx * CHUNK_SIZE + x, cz * CHUNK_SIZE + z);
-        for (let y = 0; y < Math.max(h, WATER_LEVEL); y++) chunk.set(x, y, z, World.columnBlock(h, y));
+        const wx = cx * CHUNK_SIZE + x, wz = cz * CHUNK_SIZE + z;
+        const h = this.heightAt(wx, wz);
+        for (let y = 0; y < Math.max(h, WATER_LEVEL); y++) chunk.set(x, y, z, this.groundBlock(wx, y, wz, h));
       }
     }
     this.addTrees(chunk);

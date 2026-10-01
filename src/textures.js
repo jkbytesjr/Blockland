@@ -3,7 +3,7 @@ import { mulberry32 } from './noise.js';
 
 // Procedural texture atlas: one row of 16x16 pixel tiles drawn on a canvas
 export const TILE_SIZE = 16;
-export const ATLAS_COLUMNS = 16; // room for more block types later
+export const ATLAS_COLUMNS = 32; // room for more block types later
 
 export const TILE = {
   GRASS_TOP: 0,
@@ -19,6 +19,10 @@ export const TILE = {
   GRAVEL: 10,
   LEAVES: 11,
   WATER: 12,
+  COAL_ORE: 13,
+  IRON_ORE: 14,
+  GOLD_ORE: 15,
+  DIAMOND_ORE: 16,
 };
 
 // Fill a tile pixel by pixel; `color(x, y, rand)` returns [r, g, b] in 0-255
@@ -119,6 +123,12 @@ const leavesPixel = (x, y, r) => {
 const WATER = [48, 98, 200];
 const waterPixel = (x, y, r) => shade(WATER, 0.9 + Math.sin((y + (x >> 2)) * 1.2) * 0.06 + r() * 0.06);
 
+// Ores: the stone texture with clusters of colored specks
+const ORE_SPOTS = [[3, 3], [4, 3], [4, 4], [3, 4], [2, 4], [10, 2], [11, 3], [11, 2], [12, 3], [6, 8], [6, 9], [7, 9], [7, 10], [8, 9], [12, 11], [13, 11], [12, 12], [2, 12], [3, 13], [3, 12]];
+const oreSpots = new Set(ORE_SPOTS.map(([x, y]) => `${x},${y}`));
+const orePainter = (stonePixel, color) => (x, y, r) =>
+  oreSpots.has(`${x},${y}`) ? shade(color, 0.85 + r() * 0.3) : stonePixel(x, y, r);
+
 const grassPixel = (rand) => shade(GRASS, 0.82 + rand() * 0.3);
 const dirtPixel = (rand) => {
   const r = rand();
@@ -153,9 +163,13 @@ export function createAtlasTexture() {
       cy += crackRand() < 0.5 ? 1 : -1;
     }
   }
-  paintTile(ctx, TILE.STONE, 14, (x, y, rand) =>
-    cracks.has(`${x},${y}`) ? shade(STONE, 0.62) : shade(STONE, 0.85 + rand() * 0.25)
-  );
+  const stonePixel = (x, y, rand) =>
+    cracks.has(`${x},${y}`) ? shade(STONE, 0.62) : shade(STONE, 0.85 + rand() * 0.25);
+  paintTile(ctx, TILE.STONE, 14, stonePixel);
+  paintTile(ctx, TILE.COAL_ORE, 25, orePainter(stonePixel, [40, 40, 40]));
+  paintTile(ctx, TILE.IRON_ORE, 26, orePainter(stonePixel, [216, 175, 147]));
+  paintTile(ctx, TILE.GOLD_ORE, 27, orePainter(stonePixel, [250, 215, 60]));
+  paintTile(ctx, TILE.DIAMOND_ORE, 28, orePainter(stonePixel, [92, 232, 230]));
 
   paintTile(ctx, TILE.SAND, 15, (x, y, rand) =>
     rand() < 0.07 ? shade(SAND, 0.82) : shade(SAND, 0.95 + rand() * 0.08)

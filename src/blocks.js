@@ -14,6 +14,10 @@ export const BLOCK = {
   GRAVEL: 9,
   LEAVES: 10,
   WATER: 11,
+  COAL_ORE: 12,
+  IRON_ORE: 13,
+  GOLD_ORE: 14,
+  DIAMOND_ORE: 15,
 };
 
 // Display names for the hotbar
@@ -29,6 +33,10 @@ export const BLOCK_NAMES = {
   [BLOCK.GRAVEL]: 'Gravel',
   [BLOCK.LEAVES]: 'Leaves',
   [BLOCK.WATER]: 'Water',
+  [BLOCK.COAL_ORE]: 'Coal Ore',
+  [BLOCK.IRON_ORE]: 'Iron Ore',
+  [BLOCK.GOLD_ORE]: 'Gold Ore',
+  [BLOCK.DIAMOND_ORE]: 'Diamond Ore',
 };
 
 // Which atlas tile each block shows on its top, sides and bottom
@@ -45,6 +53,10 @@ export const BLOCK_TEXTURES = {
   [BLOCK.LEAVES]: { top: TILE.LEAVES, side: TILE.LEAVES, bottom: TILE.LEAVES },
   [BLOCK.WATER]: { top: TILE.WATER, side: TILE.WATER, bottom: TILE.WATER },
 };
+// Blocks that look the same on every side
+for (const name of ['COAL_ORE', 'IRON_ORE', 'GOLD_ORE', 'DIAMOND_ORE']) {
+  BLOCK_TEXTURES[BLOCK[name]] = { top: TILE[name], side: TILE[name], bottom: TILE[name] };
+}
 
 // Blocks you can walk through and see through. Faces next to them are drawn.
 export const isSolidBlock = (id) => id !== BLOCK.AIR && id !== BLOCK.WATER;
