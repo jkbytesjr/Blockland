@@ -6,6 +6,7 @@ import { ChunkLoader } from './chunkLoader.js';
 import { createAtlasTexture } from './textures.js';
 import { BlockSelector, BlockEditor } from './interaction.js';
 import { Hud } from './ui.js';
+import { SaveManager } from './save.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -44,6 +45,10 @@ player.respawn = () => {
   player.velocity.set(0, 0, 0);
 };
 player.respawn();
+
+// Restore saved edits and position (before any chunk is generated)
+const saves = new SaveManager(world, player);
+saves.load();
 loader.loadAll(player.position.x, player.position.z);
 
 // Block targeting with a wireframe highlight
@@ -51,7 +56,10 @@ const selector = new BlockSelector(scene, camera, world);
 
 // Left click breaks, right click places; touched chunks are marked dirty and
 // rebuilt once at the end of the frame
-const editor = new BlockEditor(world, selector, player, (keys) => chunkMeshes.markDirty(keys));
+const editor = new BlockEditor(world, selector, player, (keys) => {
+  chunkMeshes.markDirty(keys);
+  saves.scheduleSave();
+});
 
 // Crosshair and hotbar; the selected slot is what right click places
 const hud = new Hud(atlas.image, () => player.locked);
@@ -66,11 +74,17 @@ window.addEventListener('resize', () => {
 // Show the start overlay whenever the pointer is not locked
 const overlay = document.getElementById('overlay');
 overlay.addEventListener('click', () => renderer.domElement.requestPointerLock());
+document.getElementById('reset').addEventListener('click', (e) => {
+  e.stopPropagation(); // don't start playing
+  if (!confirm('Start a new world? Your saved changes will be lost.')) return;
+  saves.clear();
+  location.reload();
+});
 player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'flex'; };
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, builds: chunkMeshes.builds, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 

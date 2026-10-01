@@ -18,6 +18,7 @@ game: use our own name, textures and assets, not Mojang's.
 - `src/mesher.js`: builds chunk meshes (only faces touching air)
 - `src/chunkMeshes.js`: one Three.js mesh per chunk, rebuilt on demand
 - `src/chunkLoader.js`: streams chunks in and out around the player
+- `src/save.js`: saves/loads player edits in localStorage
 - `src/player.js`: first-person controls, gravity, AABB collision
 - `src/interaction.js`: raycasting, break/place blocks
 - `src/ui.js`: hotbar, crosshair, HUD

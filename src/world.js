@@ -28,6 +28,7 @@ export class Chunk {
 
 export class World {
   constructor(seed = 1337) {
+    this.seed = seed;
     this.chunks = new Map();
     this.noise = createNoise2D(seed);
     // Player edits, kept separately from chunk data so they survive a chunk

@@ -15,6 +15,12 @@
         font: 16px/1.4 system-ui, sans-serif; text-align: center; user-select: none;
       }
       #overlay h1 { margin: 0 0 8px; font-size: 40px; letter-spacing: 2px; }
+      #overlay .small { margin-top: 8px; font-size: 13px; opacity: 0.75; }
+      #reset {
+        margin-top: 4px; padding: 6px 14px; border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 4px;
+        background: transparent; color: #fff; font: inherit; font-size: 13px; cursor: pointer;
+      }
+      #reset:hover { background: rgba(255, 255, 255, 0.15); }
       #hud { position: fixed; inset: 0; pointer-events: none; user-select: none; font: 14px system-ui, sans-serif; }
       /* Crosshair: two thin bars that invert what's behind them */
       #crosshair { position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); mix-blend-mode: difference; }
@@ -45,6 +51,8 @@
       <div>Click to play</div>
       <div>WASD move · Mouse look · Space jump · Esc release mouse</div>
       <div>Left click break · Right click place · 1-9 / scroll pick block</div>
+      <div class="small">Your changes are saved in this browser</div>
+      <button id="reset">New world</button>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

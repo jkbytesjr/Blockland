@@ -18,7 +18,7 @@ without errors. Tick the box when done.
 - [x] 11. Only rebuild the meshes of chunks that changed
 ## Milestone 5: Polish
 - [ ] 12. Day/night cycle with sky and light changes
-- [ ] 13. Save/load world changes in localStorage
+- [x] 13. Save/load world changes in localStorage
 - [ ] 14. Trees, water, and simple sound effects (stretch goals)
 ## Definition of done (every goal)
 - Runs with `npm run dev` and no console errors
@@ -44,3 +44,8 @@ without errors. Tick the box when done.
   skipped. Streaming never rebuilds an existing mesh (data ring is one wider).
 - The mesher writes into reused typed arrays (~1-2 ms per chunk in headless
   Chromium, down from ~6.5 ms). `__debug().builds` counts mesh builds.
+- Saves (src/save.js) hold only `World.edits` plus the player's position and
+  look direction under localStorage key `blockland-save` (versioned, tied to
+  the seed). Written 1 s after an edit, every 15 s, and on tab hide/close.
+  "New world" on the start overlay clears it. Goal 14 trees must be part of
+  `World.terrainBlock` or saved edits will treat them as changes.
