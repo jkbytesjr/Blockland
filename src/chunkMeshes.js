@@ -2,15 +2,17 @@ import * as THREE from 'three';
 import { CHUNK_SIZE } from './world.js';
 import { buildChunkGeometry } from './mesher.js';
 
-// Owns one Three.js mesh per chunk. A mesh is only rebuilt when its chunk
+// Owns the Three.js meshes of each chunk (a group holding a solid mesh and,
+// if the chunk has any, a see-through water mesh). A mesh is only rebuilt when its chunk
 // changed: edits mark chunks dirty and each dirty chunk is rebuilt once at the
 // end of the frame, however many blocks in it changed.
 export class ChunkMeshes {
-  constructor(scene, world, material) {
+  constructor(scene, world, material, waterMaterial) {
     this.scene = scene;
     this.world = world;
     this.material = material;
-    this.meshes = new Map(); // chunk key -> mesh
+    this.waterMaterial = waterMaterial;
+    this.meshes = new Map(); // chunk key -> group of meshes
     this.dirty = new Set(); // keys of meshed chunks waiting for a rebuild
     this.builds = 0; // total meshes built, for debugging
   }
@@ -31,16 +33,15 @@ export class ChunkMeshes {
   build(key) {
     const chunk = this.world.chunks.get(key);
     if (!chunk) return;
-    const old = this.meshes.get(key);
-    if (old) {
-      this.scene.remove(old);
-      old.geometry.dispose();
-    }
+    this.dispose(this.meshes.get(key));
     this.builds++;
-    const mesh = new THREE.Mesh(buildChunkGeometry(this.world, chunk), this.material);
-    mesh.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
-    this.scene.add(mesh);
-    this.meshes.set(key, mesh);
+    const { solid, water } = buildChunkGeometry(this.world, chunk);
+    const group = new THREE.Group();
+    if (solid) group.add(new THREE.Mesh(solid, this.material));
+    if (water) group.add(new THREE.Mesh(water, this.waterMaterial));
+    group.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
+    this.scene.add(group);
+    this.meshes.set(key, group);
   }
 
   has(key) {
@@ -48,11 +49,15 @@ export class ChunkMeshes {
   }
 
   remove(key) {
-    const mesh = this.meshes.get(key);
-    if (!mesh) return;
-    this.scene.remove(mesh);
-    mesh.geometry.dispose();
+    if (!this.meshes.has(key)) return;
+    this.dispose(this.meshes.get(key));
     this.meshes.delete(key);
     this.dirty.delete(key);
+  }
+
+  dispose(group) {
+    if (!group) return;
+    this.scene.remove(group);
+    for (const mesh of group.children) mesh.geometry.dispose();
   }
 }

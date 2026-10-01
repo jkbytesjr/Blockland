@@ -17,6 +17,8 @@ export const TILE = {
   LOG_TOP: 8,
   BRICKS: 9,
   GRAVEL: 10,
+  LEAVES: 11,
+  WATER: 12,
 };
 
 // Fill a tile pixel by pixel; `color(x, y, rand)` returns [r, g, b] in 0-255
@@ -104,6 +106,19 @@ const gravelPixel = (x, y, r) => {
   return shade(STONE, 0.78 + r() * 0.3);
 };
 
+// Leaves: clumps of green with dark gaps that read as depth
+const LEAF = [58, 128, 44];
+const leavesPixel = (x, y, r) => {
+  const v = r();
+  if (v < 0.12) return shade(LEAF, 0.35);
+  if (v < 0.3) return shade(LEAF, 0.7);
+  return shade(LEAF, 0.85 + r() * 0.35);
+};
+
+// Water: blue with soft horizontal ripples (drawn see-through in the world)
+const WATER = [48, 98, 200];
+const waterPixel = (x, y, r) => shade(WATER, 0.9 + Math.sin((y + (x >> 2)) * 1.2) * 0.06 + r() * 0.06);
+
 const grassPixel = (rand) => shade(GRASS, 0.82 + rand() * 0.3);
 const dirtPixel = (rand) => {
   const r = rand();
@@ -152,6 +167,8 @@ export function createAtlasTexture() {
   paintTile(ctx, TILE.LOG_TOP, 19, logTopPixel);
   paintTile(ctx, TILE.BRICKS, 20, brickPixel);
   paintTile(ctx, TILE.GRAVEL, 22, gravelPixel);
+  paintTile(ctx, TILE.LEAVES, 23, leavesPixel);
+  paintTile(ctx, TILE.WATER, 24, waterPixel);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter;

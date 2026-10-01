@@ -13,6 +13,7 @@ const DAY_GROUND = new THREE.Color(0x8a7a5a);
 const SUN_WARM = new THREE.Color(0xffb27a);
 const WHITE = new THREE.Color(0xffffff);
 const MOONLIGHT = new THREE.Color(0x9fb4ff);
+const UNDERWATER = new THREE.Color(0x1d4f9a);
 
 const SKY_DISTANCE = 300; // how far away the sun, moon and stars are drawn
 
@@ -61,6 +62,7 @@ export class DayNight {
     this.moon = moon;
     this.time = 0.3; // start in the morning
     this.skyColor = new THREE.Color();
+    this.fogRange = [scene.fog.near, scene.fog.far]; // normal fog, restored after a swim
 
     this.sunQuad = skyQuad(40, 0xfff2b0);
     this.moonQuad = skyQuad(26, 0xe8ecf5);
@@ -75,7 +77,7 @@ export class DayNight {
     return Math.sin((this.time - 0.25) * Math.PI * 2);
   }
 
-  update(dt, camera) {
+  update(dt, camera, underwater = false) {
     this.time = (this.time + dt / DAY_LENGTH) % 1;
     const angle = (this.time - 0.25) * Math.PI * 2;
     // Sun travels east to west, tilted a little so it isn't straight overhead
@@ -88,7 +90,16 @@ export class DayNight {
     // Sky and fog share one color so distant terrain fades into the sky
     this.skyColor.copy(NIGHT_SKY).lerp(DAY_SKY, day).lerp(DUSK_SKY, twilight * 0.55);
     this.scene.background = this.skyColor;
-    this.scene.fog.color.copy(this.skyColor);
+    const fog = this.scene.fog;
+    if (underwater) {
+      // Murky blue that closes in fast, darker at night
+      fog.color.copy(UNDERWATER).multiplyScalar(0.25 + 0.75 * day);
+      fog.near = 0;
+      fog.far = 14;
+    } else {
+      fog.color.copy(this.skyColor);
+      [fog.near, fog.far] = this.fogRange;
+    }
 
     // Lights: bright white noon sun, warm low sun, dim blue moonlight at night
     this.sun.position.copy(this._dir).multiplyScalar(100);

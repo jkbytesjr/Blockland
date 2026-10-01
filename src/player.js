@@ -9,6 +9,11 @@ export const PLAYER_WIDTH = 0.6;
 export const PLAYER_HEIGHT = 1.8;
 const MAX_FALL_SPEED = 50;
 const SKIN = 0.001; // tiny gap kept between the player and walls
+// In water: slow sinking, slower walking, and Space swims up
+const SWIM_SPEED = 4;
+const WATER_GRAVITY = 7;
+const MAX_SINK_SPEED = 3;
+const WATER_WALK = 0.6;
 
 // First-person player: WASD, mouse look via pointer lock, jump and gravity.
 // `isSolid(x, y, z)` answers whether the block at integer coords is solid.
@@ -23,6 +28,8 @@ export class Player {
     this.onGround = false;
     this.keys = new Set();
     this.locked = false;
+    this.inWater = false;
+    this.isWater = () => false; // set by the game: is (x, y, z) a water block?
 
     camera.rotation.order = 'YXZ';
 
@@ -89,16 +96,26 @@ export class Player {
     const strafe = (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0);
     const dir = new THREE.Vector3(strafe, 0, -forward);
     if (dir.lengthSq() > 0) dir.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
-    this.velocity.x = dir.x * WALK_SPEED;
-    this.velocity.z = dir.z * WALK_SPEED;
+    // Feet in water means swimming. Checking at the feet lets the last
+    // stroke lift the player out onto a bank.
+    const p = this.position;
+    this.inWater = this.isWater(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z));
+    const speed = this.inWater ? WALK_SPEED * WATER_WALK : WALK_SPEED;
+    this.velocity.x = dir.x * speed;
+    this.velocity.z = dir.z * speed;
 
-    if (this.keys.has('Space') && this.onGround) {
-      this.velocity.y = JUMP_SPEED;
-      this.onGround = false;
+    if (this.inWater) {
+      if (this.keys.has('Space')) this.velocity.y = SWIM_SPEED;
+      this.velocity.y -= WATER_GRAVITY * dt;
+      this.velocity.y = Math.max(this.velocity.y, -MAX_SINK_SPEED);
+    } else {
+      if (this.keys.has('Space') && this.onGround) {
+        this.velocity.y = JUMP_SPEED;
+        this.onGround = false;
+      }
+      this.velocity.y -= GRAVITY * dt;
+      this.velocity.y = Math.max(this.velocity.y, -MAX_FALL_SPEED);
     }
-    this.velocity.y -= GRAVITY * dt;
-
-    this.velocity.y = Math.max(this.velocity.y, -MAX_FALL_SPEED);
 
     // Move one axis at a time so we can slide along walls. Large moves are
     // split into small steps so a fast fall can't tunnel through a block.

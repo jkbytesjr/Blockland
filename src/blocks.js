@@ -12,6 +12,8 @@ export const BLOCK = {
   LOG: 7,
   BRICKS: 8,
   GRAVEL: 9,
+  LEAVES: 10,
+  WATER: 11,
 };
 
 // Display names for the hotbar
@@ -25,6 +27,8 @@ export const BLOCK_NAMES = {
   [BLOCK.LOG]: 'Log',
   [BLOCK.BRICKS]: 'Bricks',
   [BLOCK.GRAVEL]: 'Gravel',
+  [BLOCK.LEAVES]: 'Leaves',
+  [BLOCK.WATER]: 'Water',
 };
 
 // Which atlas tile each block shows on its top, sides and bottom
@@ -38,4 +42,9 @@ export const BLOCK_TEXTURES = {
   [BLOCK.LOG]: { top: TILE.LOG_TOP, side: TILE.LOG_SIDE, bottom: TILE.LOG_TOP },
   [BLOCK.BRICKS]: { top: TILE.BRICKS, side: TILE.BRICKS, bottom: TILE.BRICKS },
   [BLOCK.GRAVEL]: { top: TILE.GRAVEL, side: TILE.GRAVEL, bottom: TILE.GRAVEL },
+  [BLOCK.LEAVES]: { top: TILE.LEAVES, side: TILE.LEAVES, bottom: TILE.LEAVES },
+  [BLOCK.WATER]: { top: TILE.WATER, side: TILE.WATER, bottom: TILE.WATER },
 };
+
+// Blocks you can walk through and see through. Faces next to them are drawn.
+export const isSolidBlock = (id) => id !== BLOCK.AIR && id !== BLOCK.WATER;

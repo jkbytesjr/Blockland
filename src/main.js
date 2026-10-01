@@ -36,14 +36,19 @@ const sky = new DayNight(scene, { hemi, sun, moon });
 const world = new World();
 const atlas = createAtlasTexture();
 const material = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true });
-const chunkMeshes = new ChunkMeshes(scene, world, material);
+// Water is see-through and visible from below; it doesn't hide what's behind it
+const waterMaterial = new THREE.MeshLambertMaterial({
+  map: atlas, vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide,
+});
+const chunkMeshes = new ChunkMeshes(scene, world, material, waterMaterial);
 const loader = new ChunkLoader(world, chunkMeshes, RENDER_RADIUS);
 
 // Player, spawned on top of the terrain in the middle of the chunk
 const player = new Player(camera, renderer.domElement, (x, y, z) => world.isSolid(x, y, z));
+player.isWater = (x, y, z) => world.isWater(x, y, z);
 player.respawn = () => {
   const x = 8, z = 8;
-  player.position.set(x + 0.5, world.heightAt(x, z) + 2, z + 0.5);
+  player.position.set(x + 0.5, world.surfaceAt(x, z) + 1, z + 0.5);
   player.velocity.set(0, 0, 0);
 };
 player.respawn();
@@ -102,7 +107,8 @@ renderer.setAnimationLoop((now) => {
   last = now;
   loader.update(player.position.x, player.position.z);
   player.update(dt);
-  sky.update(Math.min(dt, 0.1), camera);
+  const cam = camera.position;
+  sky.update(Math.min(dt, 0.1), camera, world.isWater(Math.floor(cam.x), Math.floor(cam.y), Math.floor(cam.z)));
   selector.update();
   chunkMeshes.flush();
   renderer.render(scene, camera);
