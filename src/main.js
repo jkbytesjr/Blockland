@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Player } from './player.js';
 import { World } from './world.js';
 import { ChunkMeshes } from './chunkMeshes.js';
+import { ChunkLoader } from './chunkLoader.js';
 import { createAtlasTexture } from './textures.js';
 import { BlockSelector, BlockEditor } from './interaction.js';
 import { Hud } from './ui.js';
@@ -16,7 +17,9 @@ document.body.appendChild(renderer.domElement);
 const SKY = new THREE.Color(0x87ceeb);
 const scene = new THREE.Scene();
 scene.background = SKY;
-scene.fog = new THREE.Fog(SKY, 40, 120);
+// Chunks within this many chunks of the player are drawn; fog hides the edge
+const RENDER_RADIUS = 6;
+scene.fog = new THREE.Fog(SKY, RENDER_RADIUS * 16 * 0.5, RENDER_RADIUS * 16 - 8);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
 
@@ -26,17 +29,12 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(50, 100, 30);
 scene.add(sun);
 
-// World: a fixed square of chunks around the origin (infinite comes later)
-const WORLD_RADIUS = 4; // chunks in each direction from the center
+// World: an endless terrain streamed in chunk by chunk around the player
 const world = new World();
 const atlas = createAtlasTexture();
 const material = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true });
-for (let cx = -WORLD_RADIUS; cx < WORLD_RADIUS; cx++) {
-  for (let cz = -WORLD_RADIUS; cz < WORLD_RADIUS; cz++) world.generateChunk(cx, cz);
-}
-// Mesh after all chunks exist so faces on chunk borders are culled correctly
 const chunkMeshes = new ChunkMeshes(scene, world, material);
-chunkMeshes.buildAll();
+const loader = new ChunkLoader(world, chunkMeshes, RENDER_RADIUS);
 
 // Player, spawned on top of the terrain in the middle of the chunk
 const player = new Player(camera, renderer.domElement, (x, y, z) => world.isSolid(x, y, z));
@@ -46,12 +44,13 @@ player.respawn = () => {
   player.velocity.set(0, 0, 0);
 };
 player.respawn();
+loader.loadAll(player.position.x, player.position.z);
 
 // Block targeting with a wireframe highlight
 const selector = new BlockSelector(scene, camera, world);
 
 // Left click breaks, right click places; only touched chunks are re-meshed
-const editor = new BlockEditor(world, selector, player, (keys) => keys.forEach((k) => chunkMeshes.build(k)));
+const editor = new BlockEditor(world, selector, player, (keys) => keys.forEach((k) => chunkMeshes.has(k) && chunkMeshes.build(k)));
 
 // Crosshair and hotbar; the selected slot is what right click places
 const hud = new Hud(atlas.image, () => player.locked);
@@ -70,8 +69,8 @@ player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'f
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes, hud };
-  window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud };
+  window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
 // Game loop
@@ -79,6 +78,7 @@ let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = (now - last) / 1000;
   last = now;
+  loader.update(player.position.x, player.position.z);
   player.update(dt);
   selector.update();
   renderer.render(scene, camera);

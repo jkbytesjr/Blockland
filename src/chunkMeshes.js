@@ -26,7 +26,15 @@ export class ChunkMeshes {
     this.meshes.set(key, mesh);
   }
 
-  buildAll() {
-    for (const key of this.world.chunks.keys()) this.build(key);
+  has(key) {
+    return this.meshes.has(key);
+  }
+
+  remove(key) {
+    const mesh = this.meshes.get(key);
+    if (!mesh) return;
+    this.scene.remove(mesh);
+    mesh.geometry.dispose();
+    this.meshes.delete(key);
   }
 }

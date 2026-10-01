@@ -14,7 +14,7 @@ without errors. Tick the box when done.
 - [x] 8. AABB collision so the player cannot walk through blocks
 - [x] 9. Hotbar UI (keys 1-9 / scroll wheel) and crosshair
 ## Milestone 4: Big world
-- [ ] 10. Infinite world: load/unload chunks around the player
+- [x] 10. Infinite world: load/unload chunks around the player
 - [ ] 11. Only rebuild the meshes of chunks that changed
 ## Milestone 5: Polish
 - [ ] 12. Day/night cycle with sky and light changes
@@ -28,8 +28,13 @@ without errors. Tick the box when done.
 ## Notes for later goals
 - Player is a 0.6 x 1.8 AABB resolved one axis at a time (`Player.moveAxis`), with
   sub-steps so fast falls can't tunnel. No auto step-up: jump onto ledges.
-- The world is a fixed 8x8 chunk square (WORLD_RADIUS in src/main.js); goal 10
-  replaces that with streaming chunks.
+- Chunks stream around the player (src/chunkLoader.js, RENDER_RADIUS in src/main.js):
+  meshed within the radius, data one ring further so border faces cull right
+  the first time, unloaded with a one-ring gap. Work is nearest-first under a
+  per-frame time budget; fog ends just inside the render radius.
+- Player edits live in `World.edits` (chunk key -> block index -> id), separate
+  from chunk data, and are re-applied when a chunk regenerates. Setting a block
+  back to its generated value (`World.terrainBlock`) drops the edit.
 - Atlas has 16 tile slots (src/textures.js), 11 used; add tiles to TILE and BLOCK_TEXTURES.
 - Nine block types, all on the hotbar (HOTBAR_BLOCKS in src/ui.js); names in BLOCK_NAMES.
 - `window.__game` / `window.__debug` are exposed in dev only for automated checks.

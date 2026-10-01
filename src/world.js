@@ -30,6 +30,9 @@ export class World {
   constructor(seed = 1337) {
     this.chunks = new Map();
     this.noise = createNoise2D(seed);
+    // Player edits, kept separately from chunk data so they survive a chunk
+    // being unloaded and regenerated: chunk key -> Map(block index -> id)
+    this.edits = new Map();
   }
 
   static key(cx, cz) {
@@ -63,12 +66,27 @@ export class World {
     const lx = x - cx * CHUNK_SIZE;
     const lz = z - cz * CHUNK_SIZE;
     chunk.set(lx, y, lz, id);
+    this.recordEdit(cx, cz, Chunk.index(lx, y, lz), id, id === this.terrainBlock(x, y, z));
     const dirty = [World.key(cx, cz)];
     if (lx === 0) dirty.push(World.key(cx - 1, cz));
     if (lx === CHUNK_SIZE - 1) dirty.push(World.key(cx + 1, cz));
     if (lz === 0) dirty.push(World.key(cx, cz - 1));
     if (lz === CHUNK_SIZE - 1) dirty.push(World.key(cx, cz + 1));
     return dirty;
+  }
+
+  // Remember an edit, or forget it when the block is back to what the
+  // terrain generator would produce anyway
+  recordEdit(cx, cz, index, id, pristine) {
+    const key = World.key(cx, cz);
+    let chunkEdits = this.edits.get(key);
+    if (pristine) {
+      chunkEdits?.delete(index);
+      if (chunkEdits?.size === 0) this.edits.delete(key);
+      return;
+    }
+    if (!chunkEdits) this.edits.set(key, (chunkEdits = new Map()));
+    chunkEdits.set(index, id);
   }
 
   isSolid(x, y, z) {
@@ -82,21 +100,36 @@ export class World {
     return Math.max(1, Math.min(CHUNK_HEIGHT - 2, h));
   }
 
+  // What the generator puts at height y in a column whose surface is h
+  static columnBlock(h, y) {
+    if (y >= h) return BLOCK.AIR;
+    const beach = h <= SEA_LEVEL;
+    if (y === h - 1) return beach ? BLOCK.SAND : BLOCK.GRASS;
+    if (y >= h - 4) return beach ? BLOCK.SAND : BLOCK.DIRT;
+    return BLOCK.STONE;
+  }
+
+  // Unedited block at world coordinates
+  terrainBlock(x, y, z) {
+    return World.columnBlock(this.heightAt(x, z), y);
+  }
+
+  // Generate a chunk's terrain, then re-apply any edits made to it earlier
   generateChunk(cx, cz) {
     const chunk = new Chunk(cx, cz);
     for (let x = 0; x < CHUNK_SIZE; x++) {
       for (let z = 0; z < CHUNK_SIZE; z++) {
         const h = this.heightAt(cx * CHUNK_SIZE + x, cz * CHUNK_SIZE + z);
-        const beach = h <= SEA_LEVEL;
-        for (let y = 0; y < h; y++) {
-          let id = BLOCK.STONE;
-          if (y === h - 1) id = beach ? BLOCK.SAND : BLOCK.GRASS;
-          else if (y >= h - 4) id = beach ? BLOCK.SAND : BLOCK.DIRT;
-          chunk.set(x, y, z, id);
-        }
+        for (let y = 0; y < h; y++) chunk.set(x, y, z, World.columnBlock(h, y));
       }
     }
+    const chunkEdits = this.edits.get(World.key(cx, cz));
+    if (chunkEdits) for (const [index, id] of chunkEdits) chunk.blocks[index] = id;
     this.chunks.set(World.key(cx, cz), chunk);
     return chunk;
+  }
+
+  unloadChunk(key) {
+    this.chunks.delete(key);
   }
 }
