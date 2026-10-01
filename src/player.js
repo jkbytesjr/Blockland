@@ -40,6 +40,7 @@ export class Player {
     this.inWater = false;
     this.isWater = () => false; // set by the game: is (x, y, z) a water block?
     this.sprinting = false;
+    this.knock = new THREE.Vector3(); // knockback velocity from hits, fades quickly
     this.canFly = false; // creative mode
     this.flying = false;
     this.fallStart = null; // highest point of the current fall, for fall damage
@@ -171,8 +172,9 @@ export class Player {
 
     let speed = this.flying ? FLY_SPEED : this.inWater ? WALK_SPEED * WATER_WALK : WALK_SPEED;
     if (this.sprinting) speed *= SPRINT_FACTOR;
-    this.velocity.x = dir.x * speed;
-    this.velocity.z = dir.z * speed;
+    this.knock.multiplyScalar(Math.exp(-dt * 6));
+    this.velocity.x = dir.x * speed + this.knock.x;
+    this.velocity.z = dir.z * speed + this.knock.z;
 
     if (this.flying) {
       const up = (this.keys.has('Space') ? 1 : 0) - (this.keys.has('KeyC') ? 1 : 0);

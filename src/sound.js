@@ -87,6 +87,35 @@ export class Sounds {
     this.noiseBurst(t, 0.12, 'lowpass', 700, 1, 0.4);
   }
 
+  // Mob sounds: a low moan, a thwack when hit, a puff when one vanishes
+  groan() {
+    if (!this.ready) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(110 + Math.random() * 30, t);
+    osc.frequency.exponentialRampToValueAtTime(70, t + 0.7);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 500;
+    osc.connect(filter).connect(this.envelope(t, 0.7, 0.25));
+    osc.start(t);
+    osc.stop(t + 0.75);
+  }
+
+  hit() {
+    if (!this.ready) return;
+    const t = this.ctx.currentTime;
+    this.noiseBurst(t, 0.08, 'bandpass', 900, 1.2, 0.6);
+    this.tone(t, 0.1, 160, 0.5);
+  }
+
+  poof() {
+    if (!this.ready) return;
+    const filter = this.noiseBurst(this.ctx.currentTime, 0.3, 'bandpass', 3000, 0.8, 0.3);
+    filter.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.3);
+  }
+
   splash() {
     if (!this.ready) return;
     const t = this.ctx.currentTime;

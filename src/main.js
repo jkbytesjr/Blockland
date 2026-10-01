@@ -10,6 +10,7 @@ import { Inventory } from './inventory.js';
 import { GameMode } from './gameMode.js';
 import { Screens } from './screens.js';
 import { breakTime, blockDrop } from './items.js';
+import { Mobs } from './mobs.js';
 import { SaveManager } from './save.js';
 import { DayNight } from './sky.js';
 import { Sounds } from './sound.js';
@@ -96,6 +97,10 @@ editor.onPlaced = () => {
   if (!game.creative) inventory.takeOne(hud.selected);
 };
 
+// Shamblers come out at night; left click hits one if it's under the crosshair
+const mobs = new Mobs({ scene, world, player, game, sky, sounds, inventory });
+editor.tryAttack = () => mobs.attack(camera, hud.selectedItem(), selector.target?.dist);
+
 // Start menu, inventory and crafting (E), death screen
 const screens = new Screens({ player, inventory, game, hud, atlas: atlas.image, sounds });
 game.onDeath = () => screens.die();
@@ -124,7 +129,7 @@ window.addEventListener('keydown', (e) => {
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky, sounds, inventory, game, screens };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky, sounds, inventory, game, screens, mobs };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, builds: chunkMeshes.builds, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
@@ -142,6 +147,7 @@ renderer.setAnimationLoop((now) => {
   selector.update();
   editor.update(Math.min(dt, 0.1));
   game.update(Math.min(dt, 0.1));
+  if (screens.state !== 'menu') mobs.update(dt); // the world pauses on the menu
   chunkMeshes.flush();
   renderer.render(scene, camera);
 });
