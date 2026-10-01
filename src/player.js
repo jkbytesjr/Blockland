@@ -14,6 +14,14 @@ const SWIM_SPEED = 4;
 const WATER_GRAVITY = 7;
 const MAX_SINK_SPEED = 3;
 const WATER_WALK = 0.6;
+// Sprinting (Shift, or double-tap W) is faster and widens the view a little
+const SPRINT_FACTOR = 1.6;
+const BASE_FOV = 75;
+const SPRINT_FOV = 85;
+const DOUBLE_TAP = 0.3; // seconds between taps that count as a double tap
+// Creative flying: double-tap Space to toggle, Space up, C down
+const FLY_SPEED = 11;
+const FLY_VERTICAL = 8;
 
 // First-person player: WASD, mouse look via pointer lock, jump and gravity.
 // `isSolid(x, y, z)` answers whether the block at integer coords is solid.
@@ -31,6 +39,12 @@ export class Player {
     this.locked = false;
     this.inWater = false;
     this.isWater = () => false; // set by the game: is (x, y, z) a water block?
+    this.sprinting = false;
+    this.canFly = false; // creative mode
+    this.flying = false;
+    this.fallStart = null; // highest point of the current fall, for fall damage
+    this.onLand = null; // called with the number of blocks fallen
+    this.lastTap = {}; // key code -> time of the last press, for double taps
 
     camera.rotation.order = 'YXZ';
 
@@ -56,8 +70,14 @@ export class Player {
       this.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, this.pitch));
     });
     window.addEventListener('keydown', (e) => {
-      if (this.locked) this.keys.add(e.code);
       if (e.code === 'Space') e.preventDefault();
+      if (!this.locked || e.repeat) return;
+      this.keys.add(e.code);
+      const now = performance.now() / 1000;
+      const doubleTap = now - (this.lastTap[e.code] ?? -1) < DOUBLE_TAP;
+      this.lastTap[e.code] = now;
+      if (e.code === 'KeyW' && doubleTap) this.sprinting = true;
+      if (e.code === 'Space' && doubleTap && this.canFly) this.setFlying(!this.flying);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
   }
@@ -87,6 +107,12 @@ export class Player {
     this.locked = locked;
     if (!locked) this.keys.clear();
     this.onLockChange?.(locked);
+  }
+
+  setFlying(flying) {
+    this.flying = flying && this.canFly;
+    this.velocity.y = 0;
+    this.fallStart = null;
   }
 
   // Does the player's body box overlap the unit block at (x, y, z)?
@@ -135,11 +161,20 @@ export class Player {
     // stroke lift the player out onto a bank.
     const p = this.position;
     this.inWater = this.isWater(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z));
-    const speed = this.inWater ? WALK_SPEED * WATER_WALK : WALK_SPEED;
+
+    // Sprint while moving forward with Shift held or after a double-tapped W
+    if (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight')) this.sprinting = true;
+    if (forward <= 0) this.sprinting = false;
+
+    let speed = this.flying ? FLY_SPEED : this.inWater ? WALK_SPEED * WATER_WALK : WALK_SPEED;
+    if (this.sprinting) speed *= SPRINT_FACTOR;
     this.velocity.x = dir.x * speed;
     this.velocity.z = dir.z * speed;
 
-    if (this.inWater) {
+    if (this.flying) {
+      const up = (this.keys.has('Space') ? 1 : 0) - (this.keys.has('KeyC') ? 1 : 0);
+      this.velocity.y = up * FLY_VERTICAL;
+    } else if (this.inWater) {
       if (this.keys.has('Space')) this.velocity.y = SWIM_SPEED;
       this.velocity.y -= WATER_GRAVITY * dt;
       this.velocity.y = Math.max(this.velocity.y, -MAX_SINK_SPEED);
@@ -152,6 +187,13 @@ export class Player {
       this.velocity.y = Math.max(this.velocity.y, -MAX_FALL_SPEED);
     }
 
+    // Ease the field of view wider while sprinting
+    const fov = this.sprinting ? SPRINT_FOV : BASE_FOV;
+    if (Math.abs(this.camera.fov - fov) > 0.05) {
+      this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 10);
+      this.camera.updateProjectionMatrix();
+    }
+
     // Move one axis at a time so we can slide along walls. Large moves are
     // split into small steps so a fast fall can't tunnel through a block.
     this.onGround = false;
@@ -160,6 +202,16 @@ export class Player {
       this.moveAxis('x', (this.velocity.x * dt) / steps);
       this.moveAxis('z', (this.velocity.z * dt) / steps);
       this.moveAxis('y', (this.velocity.y * dt) / steps);
+    }
+
+    // Fall damage: remember the highest point since leaving the ground and
+    // report the drop on landing. Water and flying break a fall.
+    if (this.onGround || this.inWater || this.flying) {
+      if (this.onGround && this.fallStart !== null) this.onLand?.(this.fallStart - p.y);
+      this.fallStart = null;
+      if (this.onGround && this.flying) this.setFlying(false); // landing ends flight
+    } else {
+      this.fallStart = Math.max(this.fallStart ?? p.y, p.y);
     }
 
     // Fell off the world: respawn above it
