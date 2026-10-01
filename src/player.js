@@ -5,6 +5,8 @@ const GRAVITY = 28;
 const JUMP_SPEED = 9;
 const EYE_HEIGHT = 1.6;
 const MOUSE_SENSITIVITY = 0.0022;
+export const PLAYER_WIDTH = 0.6;
+export const PLAYER_HEIGHT = 1.8;
 
 // First-person player: WASD, mouse look via pointer lock, jump and gravity.
 // `isSolid(x, y, z)` answers whether the block at integer coords is solid.
@@ -41,6 +43,13 @@ export class Player {
       if (e.code === 'Space') e.preventDefault();
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
+  }
+
+  // Does the player's body box overlap the unit block at (x, y, z)?
+  overlapsBlock(x, y, z) {
+    const r = PLAYER_WIDTH / 2;
+    const p = this.position;
+    return p.x + r > x && p.x - r < x + 1 && p.z + r > z && p.z - r < z + 1 && p.y + PLAYER_HEIGHT > y && p.y < y + 1;
   }
 
   update(dt) {

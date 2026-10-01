@@ -52,6 +52,25 @@ export class World {
     return chunk.get(x - cx * CHUNK_SIZE, y, z - cz * CHUNK_SIZE);
   }
 
+  // Change a block. Returns the keys of chunks whose meshes need rebuilding:
+  // the chunk itself plus any neighbor sharing the face that was touched.
+  setBlock(x, y, z, id) {
+    if (y < 0 || y >= CHUNK_HEIGHT) return [];
+    const cx = Math.floor(x / CHUNK_SIZE);
+    const cz = Math.floor(z / CHUNK_SIZE);
+    const chunk = this.getChunk(cx, cz);
+    if (!chunk) return [];
+    const lx = x - cx * CHUNK_SIZE;
+    const lz = z - cz * CHUNK_SIZE;
+    chunk.set(lx, y, lz, id);
+    const dirty = [World.key(cx, cz)];
+    if (lx === 0) dirty.push(World.key(cx - 1, cz));
+    if (lx === CHUNK_SIZE - 1) dirty.push(World.key(cx + 1, cz));
+    if (lz === 0) dirty.push(World.key(cx, cz - 1));
+    if (lz === CHUNK_SIZE - 1) dirty.push(World.key(cx, cz + 1));
+    return dirty;
+  }
+
   isSolid(x, y, z) {
     return this.getBlock(x, y, z) !== BLOCK.AIR;
   }

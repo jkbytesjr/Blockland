@@ -62,3 +62,48 @@ export class BlockSelector {
     }
   }
 }
+
+// Mouse editing: left click breaks the targeted block, right click places
+// the selected block against the targeted face.
+export class BlockEditor {
+  constructor(world, selector, player, onChange) {
+    this.world = world;
+    this.selector = selector;
+    this.player = player;
+    this.onChange = onChange; // called with the chunk keys to rebuild
+    this.selectedBlock = () => 0;
+
+    document.addEventListener('mousedown', (e) => {
+      if (!this.player.locked) return;
+      if (e.button === 0) this.breakBlock();
+      else if (e.button === 2) this.placeBlock();
+    });
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  breakBlock() {
+    const target = this.selector.target;
+    if (!target) return false;
+    const [x, y, z] = target.block;
+    if (y <= 0) return false; // keep a floor under the world
+    this.onChange(this.world.setBlock(x, y, z, 0));
+    this.selector.update();
+    return true;
+  }
+
+  placeBlock() {
+    const target = this.selector.target;
+    const id = this.selectedBlock();
+    if (!target || !id) return false;
+    const x = target.block[0] + target.normal[0];
+    const y = target.block[1] + target.normal[1];
+    const z = target.block[2] + target.normal[2];
+    if (this.world.isSolid(x, y, z)) return false;
+    if (this.player.overlapsBlock(x, y, z)) return false; // don't bury the player
+    const dirty = this.world.setBlock(x, y, z, id);
+    if (!dirty.length) return false; // outside the world
+    this.onChange(dirty);
+    this.selector.update();
+    return true;
+  }
+}

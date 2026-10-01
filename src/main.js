@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { Player } from './player.js';
-import { World, CHUNK_SIZE } from './world.js';
-import { buildChunkGeometry } from './mesher.js';
+import { World } from './world.js';
+import { ChunkMeshes } from './chunkMeshes.js';
 import { createAtlasTexture } from './textures.js';
-import { BlockSelector } from './interaction.js';
+import { BlockSelector, BlockEditor } from './interaction.js';
+import { BLOCK } from './blocks.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -33,11 +34,8 @@ for (let cx = -WORLD_RADIUS; cx < WORLD_RADIUS; cx++) {
   for (let cz = -WORLD_RADIUS; cz < WORLD_RADIUS; cz++) world.generateChunk(cx, cz);
 }
 // Mesh after all chunks exist so faces on chunk borders are culled correctly
-for (const chunk of world.chunks.values()) {
-  const mesh = new THREE.Mesh(buildChunkGeometry(world, chunk), material);
-  mesh.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
-  scene.add(mesh);
-}
+const chunkMeshes = new ChunkMeshes(scene, world, material);
+chunkMeshes.buildAll();
 
 // Player, spawned on top of the terrain in the middle of the chunk
 const player = new Player(camera, renderer.domElement, (x, y, z) => world.isSolid(x, y, z));
@@ -50,6 +48,10 @@ player.respawn();
 
 // Block targeting with a wireframe highlight
 const selector = new BlockSelector(scene, camera, world);
+
+// Left click breaks, right click places; only touched chunks are re-meshed
+const editor = new BlockEditor(world, selector, player, (keys) => keys.forEach((k) => chunkMeshes.build(k)));
+editor.selectedBlock = () => BLOCK.DIRT;
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -64,7 +66,7 @@ player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'f
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 

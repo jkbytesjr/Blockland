@@ -10,7 +10,7 @@ without errors. Tick the box when done.
 - [x] 5. Block types: grass, dirt, stone, sand, with a procedural texture atlas
 ## Milestone 3: Play
 - [x] 6. Raycast block selection with a wireframe highlight
-- [ ] 7. Left-click breaks a block, right-click places the selected block
+- [x] 7. Left-click breaks a block, right-click places the selected block
 - [ ] 8. AABB collision so the player cannot walk through blocks
 - [ ] 9. Hotbar UI (keys 1-9 / scroll wheel) and crosshair
 ## Milestone 4: Big world
@@ -32,3 +32,6 @@ without errors. Tick the box when done.
   replaces that with streaming chunks.
 - Atlas has 16 tile slots (src/textures.js), 5 used; add tiles to TILE and BLOCK_TEXTURES.
 - `window.__game` / `window.__debug` are exposed in dev only for automated checks.
+- Edits re-mesh only the touched chunk plus a neighbor when the block is on a
+  chunk border (`World.setBlock` returns the keys, `ChunkMeshes.build` rebuilds);
+  goal 11 can build on that.
