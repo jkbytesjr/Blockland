@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Player } from './player.js';
 import { World, CHUNK_SIZE } from './world.js';
 import { buildChunkGeometry } from './mesher.js';
+import { createAtlasTexture } from './textures.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -26,7 +27,7 @@ scene.add(sun);
 // World: a fixed square of chunks around the origin (infinite comes later)
 const WORLD_RADIUS = 4; // chunks in each direction from the center
 const world = new World();
-const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+const material = new THREE.MeshLambertMaterial({ map: createAtlasTexture(), vertexColors: true });
 for (let cx = -WORLD_RADIUS; cx < WORLD_RADIUS; cx++) {
   for (let cz = -WORLD_RADIUS; cz < WORLD_RADIUS; cz++) world.generateChunk(cx, cz);
 }

@@ -1,4 +1,6 @@
-// Block ids and their properties
+import { TILE } from './textures.js';
+
+// Block ids
 export const BLOCK = {
   AIR: 0,
   GRASS: 1,
@@ -7,10 +9,10 @@ export const BLOCK = {
   SAND: 4,
 };
 
-// Flat colors used before textures exist
-export const BLOCK_COLORS = {
-  [BLOCK.GRASS]: [0.37, 0.66, 0.23],
-  [BLOCK.DIRT]: [0.53, 0.37, 0.24],
-  [BLOCK.STONE]: [0.5, 0.5, 0.5],
-  [BLOCK.SAND]: [0.86, 0.8, 0.55],
+// Which atlas tile each block shows on its top, sides and bottom
+export const BLOCK_TEXTURES = {
+  [BLOCK.GRASS]: { top: TILE.GRASS_TOP, side: TILE.GRASS_SIDE, bottom: TILE.DIRT },
+  [BLOCK.DIRT]: { top: TILE.DIRT, side: TILE.DIRT, bottom: TILE.DIRT },
+  [BLOCK.STONE]: { top: TILE.STONE, side: TILE.STONE, bottom: TILE.STONE },
+  [BLOCK.SAND]: { top: TILE.SAND, side: TILE.SAND, bottom: TILE.SAND },
 };
