@@ -7,6 +7,7 @@ import { createAtlasTexture } from './textures.js';
 import { BlockSelector, BlockEditor } from './interaction.js';
 import { Hud } from './ui.js';
 import { SaveManager } from './save.js';
+import { DayNight } from './sky.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -15,20 +16,21 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Scene with a sky color and distance fog
-const SKY = new THREE.Color(0x87ceeb);
+// (colors are set every frame by the day/night cycle)
 const scene = new THREE.Scene();
-scene.background = SKY;
 // Chunks within this many chunks of the player are drawn; fog hides the edge
 const RENDER_RADIUS = 6;
-scene.fog = new THREE.Fog(SKY, RENDER_RADIUS * 16 * 0.5, RENDER_RADIUS * 16 - 8);
+scene.fog = new THREE.Fog(0x87ceeb, RENDER_RADIUS * 16 * 0.5, RENDER_RADIUS * 16 - 8);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
 
-// Lighting: soft sky/ground fill plus a sun
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a5a, 0.9));
+// Lighting: soft sky/ground fill plus a sun and a moon, all driven by the
+// day/night cycle
+const hemi = new THREE.HemisphereLight(0xffffff, 0x8a7a5a, 0.9);
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-sun.position.set(50, 100, 30);
-scene.add(sun);
+const moon = new THREE.DirectionalLight(0x9fb4ff, 0);
+scene.add(hemi, sun, moon);
+const sky = new DayNight(scene, { hemi, sun, moon });
 
 // World: an endless terrain streamed in chunk by chunk around the player
 const world = new World();
@@ -47,7 +49,7 @@ player.respawn = () => {
 player.respawn();
 
 // Restore saved edits and position (before any chunk is generated)
-const saves = new SaveManager(world, player);
+const saves = new SaveManager(world, player, sky);
 saves.load();
 loader.loadAll(player.position.x, player.position.z);
 
@@ -82,9 +84,14 @@ document.getElementById('reset').addEventListener('click', (e) => {
 });
 player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'flex'; };
 
+// T skips ahead an eighth of a day, to see sunsets and nights sooner
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyT' && player.locked) sky.time = (sky.time + 0.125) % 1;
+});
+
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, builds: chunkMeshes.builds, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
@@ -95,6 +102,7 @@ renderer.setAnimationLoop((now) => {
   last = now;
   loader.update(player.position.x, player.position.z);
   player.update(dt);
+  sky.update(Math.min(dt, 0.1), camera);
   selector.update();
   chunkMeshes.flush();
   renderer.render(scene, camera);

@@ -17,7 +17,7 @@ without errors. Tick the box when done.
 - [x] 10. Infinite world: load/unload chunks around the player
 - [x] 11. Only rebuild the meshes of chunks that changed
 ## Milestone 5: Polish
-- [ ] 12. Day/night cycle with sky and light changes
+- [x] 12. Day/night cycle with sky and light changes
 - [x] 13. Save/load world changes in localStorage
 - [ ] 14. Trees, water, and simple sound effects (stretch goals)
 ## Definition of done (every goal)
@@ -49,3 +49,8 @@ without errors. Tick the box when done.
   the seed). Written 1 s after an edit, every 15 s, and on tab hide/close.
   "New world" on the start overlay clears it. Goal 14 trees must be part of
   `World.terrainBlock` or saved edits will treat them as changes.
+- Day/night (src/sky.js, `DayNight`): `time` 0..1 (0 midnight, 0.25 sunrise,
+  0.5 noon), one cycle per `DAY_LENGTH` (600 s). Each frame it sets sky and fog
+  color, the sun/moon directional lights and the hemisphere fill. Sun, moon
+  and stars are camera-following sky objects. T skips 1/8 day. Time of day is
+  stored in the save as `time`.
