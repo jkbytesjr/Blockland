@@ -7,8 +7,13 @@ the sound effects.
 **Play it here: https://jkbytesjr.github.io/Minecraft-2.0/**
 
 ## Features
+- Survival and creative modes
+- Survival: mine blocks by holding left click, collect them, craft tools,
+  watch your health, and fight off shamblers that come out at night
+- Creative: every block and item, instant breaking, and flying
+- Crafting: planks, sticks, wooden to diamond pickaxes and swords, ingots
+- Ores underground: coal, iron, gold and diamond
 - Endless terrain with hills, beaches, lakes and forests
-- Break and place 9 kinds of blocks
 - Day/night cycle with a moving sun and moon, sunsets and stars
 - Swimming, with a murky blue view underwater
 - Sound effects for breaking, placing, footsteps and splashes
@@ -18,11 +23,15 @@ the sound effects.
 | Key | Action |
 | --- | --- |
 | WASD | Move |
+| Shift / double-tap W | Sprint |
 | Mouse | Look around |
 | Space | Jump / swim up |
-| Left click | Break block |
+| Left click (hold) | Mine a block / hit a mob |
 | Right click | Place block |
-| 1-9 / scroll wheel | Pick block |
+| 1-9 / scroll wheel | Pick hotbar slot |
+| E | Inventory and crafting |
+| Double-tap Space | Fly (creative) |
+| C | Fly down (creative) |
 | T | Skip ahead in time |
 | M | Mute sound |
 | Esc | Release the mouse |

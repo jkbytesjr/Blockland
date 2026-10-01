@@ -21,7 +21,14 @@ game: use our own name, textures and assets, not Mojang's.
 - `src/save.js`: saves/loads player edits in localStorage
 - `src/player.js`: first-person controls, gravity, AABB collision
 - `src/interaction.js`: raycasting, break/place blocks
-- `src/ui.js`: hotbar, crosshair, HUD
+- `src/ui.js`: hotbar, crosshair, hearts, mining bar
+- `src/screens.js`: start menu, inventory/crafting screen, death screen
+- `src/items.js`: item ids, names, mining times, tools and drops
+- `src/icons.js`: item icons (block cubes and pixel-art items)
+- `src/inventory.js`: 36-slot inventory
+- `src/crafting.js`: recipe book
+- `src/gameMode.js`: survival/creative, health
+- `src/mobs.js`: night mobs
 - `src/sky.js`: day/night cycle (sun, moon, stars, sky/fog/light colors)
 - `src/sound.js`: synthesized sound effects (Web Audio, no files)
 - `src/noise.js`: simplex/perlin noise

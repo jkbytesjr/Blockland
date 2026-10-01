@@ -71,3 +71,23 @@ without errors. Tick the box when done.
   falls back to drag mode (`player.dragMode`: hold a button and drag to look,
   click without dragging to break/place, Esc for the menu) when the browser
   refuses, e.g. in a sandboxed preview iframe without allow-pointer-lock.
+
+## Extras (after the 14 goals)
+- [x] Sprinting: Shift or double-tap W (1.6x speed, FOV 75 -> 85)
+- [x] Ores: coal, iron, gold, diamond veins (`World.oreAt`, part of terrainBlock)
+- [x] Survival and creative modes (src/gameMode.js), each with its own inventory
+- [x] Inventory (src/inventory.js, 36 slots, first 9 are the hotbar) and a
+      recipe-book crafting screen on E (src/crafting.js, src/screens.js)
+- [x] Mobs at night (src/mobs.js)
+
+Notes:
+- Items (src/items.js): block items use the block id, other items are >= 100.
+  Mining time, required pickaxe tier and drops are in `MINING`.
+- Survival mining is hold-to-break (`BlockEditor.update`); creative breaks
+  instantly. Blocks needing a pickaxe drop nothing without the right tier.
+- Health: 20 points, fall damage beyond 3 blocks, heals 1 per 3 s after 5 s
+  unhurt. Death keeps the inventory. Saved in the save's `game` field.
+- Screens (menu / inventory / death) release the mouse; `Screens.state` says
+  which. Mobs pause while the start menu is open.
+- Mobs: max 10, spawn at night 18-30 blocks away, chase within 24 blocks in
+  survival only, 3 damage per hit, 12 health. Each is ~11 small meshes.
