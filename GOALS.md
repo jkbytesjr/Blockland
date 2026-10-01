@@ -11,7 +11,7 @@ without errors. Tick the box when done.
 ## Milestone 3: Play
 - [x] 6. Raycast block selection with a wireframe highlight
 - [x] 7. Left-click breaks a block, right-click places the selected block
-- [ ] 8. AABB collision so the player cannot walk through blocks
+- [x] 8. AABB collision so the player cannot walk through blocks
 - [ ] 9. Hotbar UI (keys 1-9 / scroll wheel) and crosshair
 ## Milestone 4: Big world
 - [ ] 10. Infinite world: load/unload chunks around the player
@@ -26,8 +26,8 @@ without errors. Tick the box when done.
 - Committed to git
 
 ## Notes for later goals
-- Player collision is a ground-only check that steps up onto blocks (src/player.js);
-  goal 8 replaces it with real AABB collision.
+- Player is a 0.6 x 1.8 AABB resolved one axis at a time (`Player.moveAxis`), with
+  sub-steps so fast falls can't tunnel. No auto step-up: jump onto ledges.
 - The world is a fixed 8x8 chunk square (WORLD_RADIUS in src/main.js); goal 10
   replaces that with streaming chunks.
 - Atlas has 16 tile slots (src/textures.js), 5 used; add tiles to TILE and BLOCK_TEXTURES.

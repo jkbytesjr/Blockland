@@ -7,6 +7,8 @@ const EYE_HEIGHT = 1.6;
 const MOUSE_SENSITIVITY = 0.0022;
 export const PLAYER_WIDTH = 0.6;
 export const PLAYER_HEIGHT = 1.8;
+const MAX_FALL_SPEED = 50;
+const SKIN = 0.001; // tiny gap kept between the player and walls
 
 // First-person player: WASD, mouse look via pointer lock, jump and gravity.
 // `isSolid(x, y, z)` answers whether the block at integer coords is solid.
@@ -52,6 +54,33 @@ export class Player {
     return p.x + r > x && p.x - r < x + 1 && p.z + r > z && p.z - r < z + 1 && p.y + PLAYER_HEIGHT > y && p.y < y + 1;
   }
 
+  // Move along one axis, then push back out of any solid block we entered
+  moveAxis(axis, amount) {
+    if (amount === 0) return;
+    const p = this.position;
+    p[axis] += amount;
+    const r = PLAYER_WIDTH / 2;
+    const x0 = Math.floor(p.x - r), x1 = Math.floor(p.x + r - SKIN);
+    const y0 = Math.floor(p.y), y1 = Math.floor(p.y + PLAYER_HEIGHT - SKIN);
+    const z0 = Math.floor(p.z - r), z1 = Math.floor(p.z + r - SKIN);
+    for (let x = x0; x <= x1; x++) {
+      for (let y = y0; y <= y1; y++) {
+        for (let z = z0; z <= z1; z++) {
+          if (!this.isSolid(x, y, z)) continue;
+          // Snap flush against the face of the block we ran into
+          if (axis === 'x') p.x = amount > 0 ? x - r - SKIN : x + 1 + r + SKIN;
+          if (axis === 'z') p.z = amount > 0 ? z - r - SKIN : z + 1 + r + SKIN;
+          if (axis === 'y') {
+            p.y = amount > 0 ? y - PLAYER_HEIGHT - SKIN : y + 1;
+            if (amount < 0) this.onGround = true;
+          }
+          this.velocity[axis] = 0;
+          return;
+        }
+      }
+    }
+  }
+
   update(dt) {
     dt = Math.min(dt, 0.05); // avoid huge steps after a stall
 
@@ -69,22 +98,16 @@ export class Player {
     }
     this.velocity.y -= GRAVITY * dt;
 
-    this.position.x += this.velocity.x * dt;
-    this.position.z += this.velocity.z * dt;
-    this.position.y += this.velocity.y * dt;
+    this.velocity.y = Math.max(this.velocity.y, -MAX_FALL_SPEED);
 
-    // Simple ground check under the feet (full AABB collision comes in goal 8)
-    const bx = Math.floor(this.position.x);
-    const bz = Math.floor(this.position.z);
-    const by = Math.floor(this.position.y);
+    // Move one axis at a time so we can slide along walls. Large moves are
+    // split into small steps so a fast fall can't tunnel through a block.
     this.onGround = false;
-    if (this.velocity.y <= 0 && this.isSolid(bx, by, bz)) {
-      // Step up onto the block we sank into
-      let top = by;
-      while (this.isSolid(bx, top + 1, bz)) top++;
-      this.position.y = top + 1;
-      this.velocity.y = 0;
-      this.onGround = true;
+    const steps = Math.ceil(Math.max(Math.abs(this.velocity.x), Math.abs(this.velocity.y), Math.abs(this.velocity.z)) * dt / 0.4);
+    for (let i = 0; i < steps; i++) {
+      this.moveAxis('x', (this.velocity.x * dt) / steps);
+      this.moveAxis('z', (this.velocity.z * dt) / steps);
+      this.moveAxis('y', (this.velocity.y * dt) / steps);
     }
 
     // Fell off the world: respawn above it
