@@ -7,7 +7,7 @@ export const DAY_LENGTH = 600;
 // Sky colors at a few key moments; the cycle blends between them
 const NIGHT_SKY = new THREE.Color(0x0a1028);
 const DAY_SKY = new THREE.Color(0x87ceeb);
-const DUSK_SKY = new THREE.Color(0xf08a4b);
+const DUSK_SKY = new THREE.Color(0xff7a3c);
 const NIGHT_GROUND = new THREE.Color(0x2a2f45);
 const DAY_GROUND = new THREE.Color(0x8a7a5a);
 const SUN_WARM = new THREE.Color(0xffb27a);
@@ -88,7 +88,7 @@ export class DayNight {
     const twilight = Math.exp(-((h / 0.16) ** 2)); // peaks at sunrise and sunset
 
     // Sky and fog share one color so distant terrain fades into the sky
-    this.skyColor.copy(NIGHT_SKY).lerp(DAY_SKY, day).lerp(DUSK_SKY, twilight * 0.55);
+    this.skyColor.copy(NIGHT_SKY).lerp(DAY_SKY, day).lerp(DUSK_SKY, twilight * 0.7);
     this.scene.background = this.skyColor;
     const fog = this.scene.fog;
     if (underwater) {
