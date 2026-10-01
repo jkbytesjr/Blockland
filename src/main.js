@@ -23,13 +23,19 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(50, 100, 30);
 scene.add(sun);
 
-// World: one chunk of terrain for now
+// World: a fixed square of chunks around the origin (infinite comes later)
+const WORLD_RADIUS = 4; // chunks in each direction from the center
 const world = new World();
 const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-const chunk = world.generateChunk(0, 0);
-const mesh = new THREE.Mesh(buildChunkGeometry(world, chunk), material);
-mesh.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
-scene.add(mesh);
+for (let cx = -WORLD_RADIUS; cx < WORLD_RADIUS; cx++) {
+  for (let cz = -WORLD_RADIUS; cz < WORLD_RADIUS; cz++) world.generateChunk(cx, cz);
+}
+// Mesh after all chunks exist so faces on chunk borders are culled correctly
+for (const chunk of world.chunks.values()) {
+  const mesh = new THREE.Mesh(buildChunkGeometry(world, chunk), material);
+  mesh.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
+  scene.add(mesh);
+}
 
 // Player, spawned on top of the terrain in the middle of the chunk
 const player = new Player(camera, renderer.domElement, (x, y, z) => world.isSolid(x, y, z));

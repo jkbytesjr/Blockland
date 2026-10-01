@@ -12,12 +12,21 @@ const FACES = [
   { dir: [0, 0, 1], corners: [[0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]] },
 ];
 
-// Builds one BufferGeometry for a whole chunk, in chunk-local coordinates
+// Builds one BufferGeometry for a whole chunk, in chunk-local coordinates.
+// Only faces that touch air are emitted, including across chunk borders.
 export function buildChunkGeometry(world, chunk) {
   const positions = [];
   const normals = [];
   const colors = [];
   const indices = [];
+  const ox = chunk.cx * CHUNK_SIZE;
+  const oz = chunk.cz * CHUNK_SIZE;
+
+  // Neighbor lookup: stay inside this chunk when possible, else ask the world
+  const neighbor = (x, y, z) =>
+    x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE && y >= 0 && y < CHUNK_HEIGHT
+      ? chunk.get(x, y, z)
+      : world.getBlock(ox + x, y, oz + z);
 
   for (let y = 0; y < CHUNK_HEIGHT; y++) {
     for (let z = 0; z < CHUNK_SIZE; z++) {
@@ -26,6 +35,7 @@ export function buildChunkGeometry(world, chunk) {
         if (id === BLOCK.AIR) continue;
         const color = BLOCK_COLORS[id];
         for (const { dir, corners } of FACES) {
+          if (neighbor(x + dir[0], y + dir[1], z + dir[2]) !== BLOCK.AIR) continue;
           const first = positions.length / 3;
           for (const c of corners) {
             positions.push(x + c[0], y + c[1], z + c[2]);
