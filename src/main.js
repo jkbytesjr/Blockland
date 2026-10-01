@@ -8,6 +8,7 @@ import { BlockSelector, BlockEditor } from './interaction.js';
 import { Hud } from './ui.js';
 import { SaveManager } from './save.js';
 import { DayNight } from './sky.js';
+import { Sounds } from './sound.js';
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -68,6 +69,10 @@ const editor = new BlockEditor(world, selector, player, (keys) => {
   saves.scheduleSave();
 });
 
+// Sound effects for breaking, placing, footsteps and splashes
+const sounds = new Sounds();
+editor.onSound = (kind, id) => sounds.block(kind, id);
+
 // Crosshair and hotbar; the selected slot is what right click places
 const hud = new Hud(atlas.image, () => player.locked);
 editor.selectedBlock = () => hud.selectedBlock();
@@ -80,7 +85,10 @@ window.addEventListener('resize', () => {
 
 // Show the start overlay whenever the pointer is not locked
 const overlay = document.getElementById('overlay');
-overlay.addEventListener('click', () => renderer.domElement.requestPointerLock());
+overlay.addEventListener('click', () => {
+  sounds.unlock(); // audio may only start from a click
+  renderer.domElement.requestPointerLock();
+});
 document.getElementById('reset').addEventListener('click', (e) => {
   e.stopPropagation(); // don't start playing
   if (!confirm('Start a new world? Your saved changes will be lost.')) return;
@@ -89,14 +97,16 @@ document.getElementById('reset').addEventListener('click', (e) => {
 });
 player.onLockChange = (locked) => { overlay.style.display = locked ? 'none' : 'flex'; };
 
-// T skips ahead an eighth of a day, to see sunsets and nights sooner
+// T skips ahead an eighth of a day, to see sunsets and nights sooner; M mutes
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'KeyT' && player.locked) sky.time = (sky.time + 0.125) % 1;
+  if (!player.locked) return;
+  if (e.code === 'KeyT') sky.time = (sky.time + 0.125) % 1;
+  if (e.code === 'KeyM') sounds.toggleMute();
 });
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky, sounds };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, builds: chunkMeshes.builds, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
@@ -107,6 +117,8 @@ renderer.setAnimationLoop((now) => {
   last = now;
   loader.update(player.position.x, player.position.z);
   player.update(dt);
+  const feet = player.position;
+  sounds.update(Math.min(dt, 0.05), player, () => world.getBlock(Math.floor(feet.x), Math.floor(feet.y - 0.1), Math.floor(feet.z)));
   const cam = camera.position;
   sky.update(Math.min(dt, 0.1), camera, world.isWater(Math.floor(cam.x), Math.floor(cam.y), Math.floor(cam.z)));
   selector.update();

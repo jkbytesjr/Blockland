@@ -22,6 +22,8 @@ game: use our own name, textures and assets, not Mojang's.
 - `src/player.js`: first-person controls, gravity, AABB collision
 - `src/interaction.js`: raycasting, break/place blocks
 - `src/ui.js`: hotbar, crosshair, HUD
+- `src/sky.js`: day/night cycle (sun, moon, stars, sky/fog/light colors)
+- `src/sound.js`: synthesized sound effects (Web Audio, no files)
 - `src/noise.js`: simplex/perlin noise
 - `src/textures.js`: procedural texture atlas
 

@@ -72,6 +72,7 @@ export class BlockEditor {
     this.player = player;
     this.onChange = onChange; // called with the chunk keys to rebuild
     this.selectedBlock = () => 0;
+    this.onSound = () => {}; // called with ('break' | 'place', block id)
 
     document.addEventListener('mousedown', (e) => {
       if (!this.player.locked) return;
@@ -86,6 +87,7 @@ export class BlockEditor {
     if (!target) return false;
     const [x, y, z] = target.block;
     if (y <= 0) return false; // keep a floor under the world
+    this.onSound('break', this.world.getBlock(x, y, z));
     this.onChange(this.world.setBlock(x, y, z, 0));
     this.selector.update();
     return true;
@@ -102,6 +104,7 @@ export class BlockEditor {
     if (this.player.overlapsBlock(x, y, z)) return false; // don't bury the player
     const dirty = this.world.setBlock(x, y, z, id);
     if (!dirty.length) return false; // outside the world
+    this.onSound('place', id);
     this.onChange(dirty);
     this.selector.update();
     return true;

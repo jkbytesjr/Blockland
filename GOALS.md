@@ -19,7 +19,7 @@ without errors. Tick the box when done.
 ## Milestone 5: Polish
 - [x] 12. Day/night cycle with sky and light changes
 - [x] 13. Save/load world changes in localStorage
-- [ ] 14. Trees, water, and simple sound effects (stretch goals)
+- [x] 14. Trees, water, and simple sound effects (stretch goals)
 ## Definition of done (every goal)
 - Runs with `npm run dev` and no console errors
 - Holds a smooth frame rate (aim for 60 FPS)
@@ -54,3 +54,16 @@ without errors. Tick the box when done.
   color, the sun/moon directional lights and the hemisphere fill. Sun, moon
   and stars are camera-following sky objects. T skips 1/8 day. Time of day is
   stored in the save as `time`.
+- Trees come from the generator (`World.treeInCell` / `World.treeBlock`): at most
+  one per 7x7 cell, kept 2 blocks inside it so leaves never cross into another
+  cell, so `terrainBlock` checks just one cell. Only on grass (above the beach).
+- Water (BLOCK.WATER) fills air below `WATER_LEVEL` (22). It is not solid
+  (`isSolidBlock`), so the player, the selection ray and placement pass through
+  it. Chunks have a second, see-through water mesh (`buildChunkGeometry`
+  returns `{ solid, water }`, ChunkMeshes keeps a Group per chunk). Water does
+  not flow: breaking a lake bed leaves an air pocket.
+- Swimming (`Player.inWater`, checked at the feet): slow sinking, Space swims
+  up, 60% walk speed. Fog turns blue and short when the camera is underwater.
+- Sounds (src/sound.js) are synthesized with Web Audio: break/place/step per
+  material, plus a splash. The AudioContext is created on the start-overlay
+  click. M mutes.
