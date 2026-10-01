@@ -93,12 +93,15 @@ export class Player {
       this.dragMode = true;
       this.setLocked(true);
     };
+    // A refusal can also be temporary (e.g. clicking right after Esc). Only
+    // switch to drag mode for good inside a frame, where it's likely permanent.
+    const refused = () => window.self !== window.top && fallback();
     if (!el.requestPointerLock || this.lockBlocked) return fallback();
-    document.addEventListener('pointerlockerror', fallback, { once: true });
+    document.addEventListener('pointerlockerror', refused, { once: true });
     try {
-      el.requestPointerLock()?.catch?.(fallback);
+      el.requestPointerLock()?.catch?.(refused);
     } catch {
-      fallback();
+      fallback(); // blocked outright, e.g. a sandboxed frame
     }
   }
 

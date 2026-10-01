@@ -63,36 +63,90 @@ export class BlockSelector {
   }
 }
 
-// Mouse editing: left click breaks the targeted block, right click places
-// the selected block against the targeted face.
+// Mouse editing. Left button breaks the targeted block: instantly in
+// creative, or by holding it down in survival (time depends on the block and
+// the tool). Right click places the held block against the targeted face.
 export class BlockEditor {
   constructor(world, selector, player, onChange) {
     this.world = world;
     this.selector = selector;
     this.player = player;
     this.onChange = onChange; // called with the chunk keys to rebuild
-    this.selectedBlock = () => 0;
-    this.onSound = () => {}; // called with ('break' | 'place', block id)
+    // Set up by the game:
+    this.heldItem = () => 0; // item id in the selected hotbar slot
+    this.creative = () => false;
+    this.breakTime = () => 1; // seconds to break (block id, held item id)
+    this.onBroken = () => {}; // (block id, held item id), for drops
+    this.onPlaced = () => {}; // the held block was placed (use one up)
+    this.onSound = () => {}; // ('break' | 'place' | 'step', block id)
+    this.tryAttack = () => false; // hit a mob instead? true if one was hit
+    this.onProgress = () => {}; // mining progress 0..1
+
+    this.mining = false; // left button held
+    this.progress = 0;
+    this.miningBlock = null; // "x,y,z" of the block being mined
+    this.hitTimer = 0;
 
     // With a captured mouse, act on press. In drag mode a press may start a
-    // look-around drag, so act on release, and only if the mouse barely moved.
+    // look-around drag: mining stops once the mouse moves, and placing waits
+    // for a release that barely moved.
     let down = null;
     document.addEventListener('mousedown', (e) => {
       if (!this.player.locked) return;
-      if (this.player.dragMode) down = { x: e.clientX, y: e.clientY };
-      else this.click(e.button);
+      down = { x: e.clientX, y: e.clientY };
+      if (e.button === 0) this.startMining();
+      else if (e.button === 2 && !this.player.dragMode) this.placeBlock();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (down && this.player.dragMode && Math.hypot(e.clientX - down.x, e.clientY - down.y) >= 6) this.stopMining();
     });
     document.addEventListener('mouseup', (e) => {
-      if (!this.player.locked || !this.player.dragMode || !down) return;
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) this.click(e.button);
+      if (e.button === 0) this.stopMining();
+      const still = down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6;
+      if (e.button === 2 && this.player.dragMode && this.player.locked && still) this.placeBlock();
       down = null;
     });
     document.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  click(button) {
-    if (button === 0) this.breakBlock();
-    else if (button === 2) this.placeBlock();
+  startMining() {
+    if (this.tryAttack()) return;
+    this.mining = true;
+    this.progress = 0;
+    this.miningBlock = null;
+    if (this.creative()) this.breakBlock();
+  }
+
+  stopMining() {
+    this.mining = false;
+    this.progress = 0;
+    this.onProgress(0);
+  }
+
+  // Survival mining: progress builds while the button stays on one block
+  update(dt) {
+    if (!this.mining || !this.player.locked || this.creative()) return;
+    const target = this.selector.target;
+    if (!target) return this.onProgress((this.progress = 0));
+    const [x, y, z] = target.block;
+    const key = `${x},${y},${z}`;
+    const id = this.world.getBlock(x, y, z);
+    if (key !== this.miningBlock) {
+      this.miningBlock = key;
+      this.progress = 0;
+    }
+    this.progress += dt / this.breakTime(id, this.heldItem());
+    this.hitTimer -= dt;
+    if (this.hitTimer <= 0) {
+      this.hitTimer = 0.25;
+      this.onSound('step', id); // tapping sound while mining
+    }
+    if (this.progress >= 1) {
+      this.breakBlock();
+      this.progress = 0;
+      this.miningBlock = null;
+    }
+    this.onProgress(this.progress);
   }
 
   breakBlock() {
@@ -100,16 +154,18 @@ export class BlockEditor {
     if (!target) return false;
     const [x, y, z] = target.block;
     if (y <= 0) return false; // keep a floor under the world
-    this.onSound('break', this.world.getBlock(x, y, z));
+    const id = this.world.getBlock(x, y, z);
+    this.onSound('break', id);
     this.onChange(this.world.setBlock(x, y, z, 0));
+    this.onBroken(id, this.heldItem());
     this.selector.update();
     return true;
   }
 
   placeBlock() {
     const target = this.selector.target;
-    const id = this.selectedBlock();
-    if (!target || !id) return false;
+    const id = this.heldItem();
+    if (!target || !id || id >= 100) return false; // only blocks can be placed
     const x = target.block[0] + target.normal[0];
     const y = target.block[1] + target.normal[1];
     const z = target.block[2] + target.normal[2];
@@ -119,6 +175,7 @@ export class BlockEditor {
     if (!dirty.length) return false; // outside the world
     this.onSound('place', id);
     this.onChange(dirty);
+    this.onPlaced();
     this.selector.update();
     return true;
   }

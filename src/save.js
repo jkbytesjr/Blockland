@@ -1,11 +1,12 @@
 // Saves player edits and position to localStorage and restores them.
 // Only edits are stored (terrain is regenerated from the seed), so a save
-// stays small: { v, seed, player: [x, y, z, yaw, pitch], time, edits: { "cx,cz": [index, id, ...] } }
+// stays small: { v, seed, player: [x, y, z, yaw, pitch], time, game, edits: { "cx,cz": [index, id, ...] } }
 const STORAGE_KEY = 'blockland-save';
 const VERSION = 1;
 
 export class SaveManager {
-  constructor(world, player, sky) {
+  constructor(world, player, sky, game) {
+    this.game = game; // mode, health and inventories
     this.world = world;
     this.player = player;
     this.sky = sky; // its time of day is saved too
@@ -39,6 +40,7 @@ export class SaveManager {
       this.player.pitch = pitch;
     }
     if (typeof data.time === 'number') this.sky.time = data.time;
+    this.game.load(data.game);
     return true;
   }
 
@@ -54,7 +56,7 @@ export class SaveManager {
     for (const [key, chunkEdits] of this.world.edits) edits[key] = [...chunkEdits].flat();
     const { x, y, z } = this.player.position;
     const round = (v) => Math.round(v * 100) / 100;
-    const data = { v: VERSION, seed: this.world.seed, player: [x, y, z, this.player.yaw, this.player.pitch].map(round), time: round(this.sky.time), edits };
+    const data = { v: VERSION, seed: this.world.seed, player: [x, y, z, this.player.yaw, this.player.pitch].map(round), time: round(this.sky.time), game: this.game.toJSON(), edits };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (err) {

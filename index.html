@@ -16,6 +16,42 @@
       }
       #overlay h1 { margin: 0 0 8px; font-size: 40px; letter-spacing: 2px; }
       #overlay .small { margin-top: 8px; font-size: 13px; opacity: 0.75; }
+      #overlay .big { font-size: 20px; font-weight: 600; margin: 4px 0; }
+      .modes { display: flex; gap: 8px; }
+      .modes button, .panel button {
+        padding: 8px 18px; border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 6px;
+        background: rgba(0, 0, 0, 0.3); color: #fff; font: 600 15px system-ui, sans-serif; cursor: pointer;
+      }
+      .modes button.chosen { border-color: #fff; background: rgba(255, 255, 255, 0.25); }
+      .modes button:hover, .panel button:hover { background: rgba(255, 255, 255, 0.18); }
+      .panel {
+        position: fixed; z-index: 11; inset: 0; display: none; align-items: center; justify-content: center;
+        background: rgba(0, 0, 0, 0.5); color: #fff; font: 14px/1.4 system-ui, sans-serif; user-select: none;
+      }
+      .panel .box { background: #3b3b42; border: 2px solid #777; border-radius: 8px; padding: 16px; max-height: 92vh; overflow: auto; text-align: center; }
+      .panel h1 { margin: 0 0 8px; }
+      .panel h2 { margin: 0 0 8px; font-size: 16px; text-align: left; }
+      #death .box { background: rgba(120, 10, 10, 0.85); padding: 28px 48px; }
+      .cols { display: flex; gap: 20px; flex-wrap: wrap; text-align: left; }
+      .grid { display: grid; grid-template-columns: repeat(9, 48px); gap: 4px; }
+      .hotbar-row { margin-top: 10px; }
+      .panel .slot, #hotbar .slot {
+        position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+        border: 2px solid rgba(255, 255, 255, 0.15); border-radius: 4px; box-sizing: border-box;
+      }
+      .panel .slot { background: rgba(0, 0, 0, 0.3); cursor: pointer; }
+      .panel .slot:hover { border-color: rgba(255, 255, 255, 0.6); }
+      .panel .slot.picked { border-color: #ffd23f; background: rgba(255, 210, 63, 0.2); }
+      .slot .count { position: absolute; right: 3px; bottom: 1px; color: #fff; font: 600 12px system-ui, sans-serif; text-shadow: 0 1px 2px #000; }
+      .side-col { width: 300px; }
+      .side { max-height: 330px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+      .side.palette { flex-direction: row; flex-wrap: wrap; }
+      .recipe { display: flex; align-items: center; gap: 8px; padding: 2px 6px; border-radius: 4px; background: rgba(0, 0, 0, 0.3); cursor: pointer; }
+      .recipe:hover { background: rgba(255, 255, 255, 0.15); }
+      .recipe.missing { opacity: 0.4; cursor: default; }
+      .recipe b { display: block; }
+      .recipe small { opacity: 0.8; }
+      .panel .hint { margin: 10px 0; font-size: 12px; opacity: 0.75; }
       #reset {
         margin-top: 4px; padding: 6px 14px; border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 4px;
         background: transparent; color: #fff; font: inherit; font-size: 13px; cursor: pointer;
@@ -38,14 +74,19 @@
         position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
         display: flex; gap: 4px; padding: 4px; background: rgba(0, 0, 0, 0.45); border-radius: 6px;
       }
-      #hotbar .slot {
-        position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
-        border: 2px solid rgba(255, 255, 255, 0.15); border-radius: 4px; box-sizing: border-box;
-      }
       #hotbar .slot.active { border-color: #fff; background: rgba(255, 255, 255, 0.18); }
-      #hotbar .slot span { position: absolute; left: 3px; top: 1px; color: #fff; font-size: 11px; text-shadow: 0 1px 2px #000; }
+      #hotbar .slot .num { position: absolute; left: 3px; top: 1px; color: #fff; font-size: 11px; text-shadow: 0 1px 2px #000; }
+      #hearts { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); display: flex; gap: 2px; }
+      .heart { width: 16px; height: 16px; background: #3a0d0d; clip-path: polygon(50% 100%, 0 40%, 0 15%, 15% 0, 35% 0, 50% 18%, 65% 0, 85% 0, 100% 15%, 100% 40%); }
+      .heart.full { background: #e8282f; }
+      .heart.half { background: linear-gradient(90deg, #e8282f 50%, #3a0d0d 50%); }
+      #mining { display: none; position: absolute; left: 50%; top: calc(50% + 18px); width: 60px; height: 5px; transform: translateX(-50%); background: rgba(0, 0, 0, 0.5); }
+      #mining div { height: 100%; width: 0; background: #fff; }
+      #hurt { position: absolute; inset: 0; box-shadow: inset 0 0 120px rgba(255, 0, 0, 0.7); opacity: 0; }
+      #hurt.flash { animation: hurt 0.4s ease-out; }
+      @keyframes hurt { 0% { opacity: 1; } 100% { opacity: 0; } }
       #block-name {
-        position: absolute; left: 50%; bottom: 82px; transform: translateX(-50%);
+        position: absolute; left: 50%; bottom: 94px; transform: translateX(-50%);
         color: #fff; text-shadow: 0 1px 3px #000; opacity: 0;
       }
       #block-name.fade { animation: name-fade 1.6s ease-out; }
@@ -55,12 +96,40 @@
   <body>
     <div id="overlay">
       <h1>BLOCKLAND</h1>
-      <div>Click to play</div>
+      <div class="modes">
+        <button data-mode="survival">Survival</button>
+        <button data-mode="creative">Creative</button>
+      </div>
+      <div class="big">Click to play</div>
       <div>WASD move · Shift or double-tap W sprint · Space jump · Esc menu</div>
-      <div>Left click break · Right click place · 1-9 / scroll pick block </div>
-      <div>T skip ahead in time · M mute sound</div>
-      <div class="small">Your changes are saved in this browser</div>
+      <div>Hold left click mine · Right click place · 1-9 / scroll pick · E inventory &amp; crafting</div>
+      <div>Creative: double-tap Space to fly, C to go down · T skip time · M mute</div>
+      <div class="small">Mobs come out at night in survival. Your world is saved in this browser.</div>
       <button id="reset">New world</button>
+    </div>
+    <div id="inventory" class="panel">
+      <div class="box">
+        <div class="cols">
+          <div>
+            <h2>Inventory</h2>
+            <div class="grid backpack"></div>
+            <div class="grid hotbar-row"></div>
+          </div>
+          <div class="side-col">
+            <h2 class="side-title">Crafting</h2>
+            <div class="side"></div>
+          </div>
+        </div>
+        <div class="hint"></div>
+        <button class="close">Back to game (E)</button>
+      </div>
+    </div>
+    <div id="death" class="panel">
+      <div class="box">
+        <h1>You died</h1>
+        <p>You keep your items.</p>
+        <button>Respawn</button>
+      </div>
     </div>
     <div id="drag-hint">Drag the mouse to look around · Esc for menu</div>
     <script type="module" src="/src/main.js"></script>

@@ -79,6 +79,14 @@ export class Sounds {
     if (material.thump && thump) this.tone(t, duration * 0.8, material.thump * vary, gain * thump);
   }
 
+  // A short low grunt when the player gets hurt
+  hurt() {
+    if (!this.ready) return;
+    const t = this.ctx.currentTime;
+    this.tone(t, 0.18, 220, 0.5);
+    this.noiseBurst(t, 0.12, 'lowpass', 700, 1, 0.4);
+  }
+
   splash() {
     if (!this.ready) return;
     const t = this.ctx.currentTime;

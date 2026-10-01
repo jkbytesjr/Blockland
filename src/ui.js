@@ -1,93 +1,115 @@
-import { BLOCK, BLOCK_NAMES, BLOCK_TEXTURES } from './blocks.js';
-import { TILE_SIZE } from './textures.js';
+import { HOTBAR } from './inventory.js';
+import { iconElement } from './icons.js';
+import { itemName } from './items.js';
 
-const HOTBAR_BLOCKS = [
-  BLOCK.GRASS, BLOCK.DIRT, BLOCK.STONE, BLOCK.COBBLESTONE, BLOCK.PLANKS,
-  BLOCK.LOG, BLOCK.BRICKS, BLOCK.SAND, BLOCK.GRAVEL,
-];
-const ICON_SIZE = 40; // CSS pixels
-
-// Draws a small isometric cube icon for a block from the texture atlas
-function drawBlockIcon(canvas, atlas, id) {
-  const scale = window.devicePixelRatio || 1;
-  const S = ICON_SIZE * scale;
-  canvas.width = canvas.height = S;
-  canvas.style.width = canvas.style.height = `${ICON_SIZE}px`;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-
-  const w = S * 0.45; // half the cube's width
-  const h = w / 2; // rise of the top face edges
-  const cx = S / 2;
-  const y0 = S * 0.05;
-  const k = 1 / TILE_SIZE;
-  const tex = BLOCK_TEXTURES[id];
-  // Each face maps the 16x16 tile onto a parallelogram via setTransform
-  const faces = [
-    { tile: tex.top, m: [w * k, -h * k, w * k, h * k, cx - w, y0 + h], dark: 0 },
-    { tile: tex.side, m: [w * k, h * k, 0, w * k, cx - w, y0 + h], dark: 0.25 },
-    { tile: tex.side, m: [w * k, -h * k, 0, w * k, cx, y0 + 2 * h], dark: 0.4 },
-  ];
-  for (const { tile, m, dark } of faces) {
-    ctx.setTransform(...m);
-    ctx.drawImage(atlas, tile * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, 0, 0, TILE_SIZE, TILE_SIZE);
-    ctx.fillStyle = `rgba(0, 0, 0, ${dark})`;
-    ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+// Draw a slot's contents: the item icon plus a count when more than one
+export function fillSlot(el, atlas, slot) {
+  el.querySelector('canvas')?.remove();
+  el.querySelector('.count')?.remove();
+  if (!slot) return;
+  el.prepend(iconElement(atlas, slot.id));
+  if (slot.count > 1) {
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = slot.count;
+    el.append(count);
   }
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-// Crosshair plus a nine-slot hotbar picked with keys 1-9 or the scroll wheel
+// Crosshair, nine-slot hotbar (keys 1-9 or scroll wheel), hearts, and a
+// mining progress bar. The hotbar shows the first nine inventory slots.
 export class Hud {
-  constructor(atlas, isActive) {
+  constructor(atlas, inventory, isActive) {
+    this.atlas = atlas;
+    this.inventory = inventory;
     this.selected = 0;
 
     const root = document.createElement('div');
     root.id = 'hud';
     root.innerHTML = `
       <div id="crosshair"></div>
+      <div id="mining"><div></div></div>
       <div id="block-name"></div>
-      <div id="hotbar"></div>`;
+      <div id="hearts"></div>
+      <div id="hotbar"></div>
+      <div id="hurt"></div>`;
     document.body.appendChild(root);
     this.nameEl = root.querySelector('#block-name');
+    this.heartsEl = root.querySelector('#hearts');
+    this.miningEl = root.querySelector('#mining');
+    this.hurtEl = root.querySelector('#hurt');
 
     const bar = root.querySelector('#hotbar');
-    this.slots = HOTBAR_BLOCKS.map((id, i) => {
+    this.slots = Array.from({ length: HOTBAR }, (_, i) => {
       const slot = document.createElement('div');
       slot.className = 'slot';
-      const icon = document.createElement('canvas');
-      drawBlockIcon(icon, atlas, id);
       const num = document.createElement('span');
+      num.className = 'num';
       num.textContent = i + 1;
-      slot.append(icon, num);
+      slot.append(num);
       bar.appendChild(slot);
       return slot;
     });
 
     window.addEventListener('keydown', (e) => {
       const n = /^Digit([1-9])$/.exec(e.code);
-      if (n) this.select(Number(n[1]) - 1);
+      if (n && isActive()) this.select(Number(n[1]) - 1);
     });
     window.addEventListener('wheel', (e) => {
       if (!isActive() || e.deltaY === 0) return;
       this.select(this.selected + Math.sign(e.deltaY));
     }, { passive: true });
 
+    inventory.onChange(() => this.render());
+    this.render();
     this.select(0);
   }
 
+  render() {
+    this.slots.forEach((el, i) => fillSlot(el, this.atlas, this.inventory.slots[i]));
+  }
+
   select(index) {
-    const n = this.slots.length;
-    this.selected = ((index % n) + n) % n; // wrap around both ways
+    this.selected = ((index % HOTBAR) + HOTBAR) % HOTBAR; // wrap around both ways
     this.slots.forEach((s, i) => s.classList.toggle('active', i === this.selected));
-    // Briefly show the block name above the hotbar
-    this.nameEl.textContent = BLOCK_NAMES[this.selectedBlock()];
+    // Briefly show the item name above the hotbar
+    const id = this.selectedItem();
+    this.nameEl.textContent = id ? itemName(id) : '';
     this.nameEl.classList.remove('fade');
     void this.nameEl.offsetWidth; // restart the fade animation
     this.nameEl.classList.add('fade');
   }
 
-  selectedBlock() {
-    return HOTBAR_BLOCKS[this.selected];
+  // Item id in the selected hotbar slot (0 when empty)
+  selectedItem() {
+    return this.inventory.slots[this.selected]?.id ?? 0;
+  }
+
+  // Ten hearts for 20 health points; null hides them (creative mode)
+  setHealth(health, max = 20) {
+    if (health === null) {
+      this.heartsEl.style.display = 'none';
+      return;
+    }
+    this.heartsEl.style.display = 'flex';
+    let html = '';
+    for (let i = 0; i < max / 2; i++) {
+      const hp = health - i * 2;
+      html += `<span class="heart ${hp >= 2 ? 'full' : hp === 1 ? 'half' : 'empty'}"></span>`;
+    }
+    this.heartsEl.innerHTML = html;
+  }
+
+  // Mining progress 0..1 (0 hides the bar)
+  setProgress(p) {
+    this.miningEl.style.display = p > 0 ? 'block' : 'none';
+    this.miningEl.firstElementChild.style.width = `${Math.min(1, p) * 100}%`;
+  }
+
+  // Flash the screen red when hurt
+  flashHurt() {
+    this.hurtEl.classList.remove('flash');
+    void this.hurtEl.offsetWidth;
+    this.hurtEl.classList.add('flash');
   }
 }

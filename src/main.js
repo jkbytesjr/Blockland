@@ -6,6 +6,10 @@ import { ChunkLoader } from './chunkLoader.js';
 import { createAtlasTexture } from './textures.js';
 import { BlockSelector, BlockEditor } from './interaction.js';
 import { Hud } from './ui.js';
+import { Inventory } from './inventory.js';
+import { GameMode } from './gameMode.js';
+import { Screens } from './screens.js';
+import { breakTime, blockDrop } from './items.js';
 import { SaveManager } from './save.js';
 import { DayNight } from './sky.js';
 import { Sounds } from './sound.js';
@@ -54,28 +58,48 @@ player.respawn = () => {
 };
 player.respawn();
 
-// Restore saved edits and position (before any chunk is generated)
-const saves = new SaveManager(world, player, sky);
+// Inventory, hotbar and the game mode (survival or creative) with health
+const inventory = new Inventory();
+const hud = new Hud(atlas.image, inventory, () => player.locked);
+const game = new GameMode(player, inventory, hud);
+
+// Restore saved edits, position, mode and inventory (before any chunk is generated)
+const saves = new SaveManager(world, player, sky, game);
 saves.load();
 loader.loadAll(player.position.x, player.position.z);
 
 // Block targeting with a wireframe highlight
 const selector = new BlockSelector(scene, camera, world);
 
-// Left click breaks, right click places; touched chunks are marked dirty and
+// Sound effects for breaking, placing, footsteps, splashes and getting hurt
+const sounds = new Sounds();
+game.onHurt = () => sounds.hurt();
+
+// Left button breaks, right click places; touched chunks are marked dirty and
 // rebuilt once at the end of the frame
 const editor = new BlockEditor(world, selector, player, (keys) => {
   chunkMeshes.markDirty(keys);
   saves.scheduleSave();
 });
-
-// Sound effects for breaking, placing, footsteps and splashes
-const sounds = new Sounds();
+editor.heldItem = () => hud.selectedItem();
+editor.creative = () => game.creative;
+editor.breakTime = breakTime;
 editor.onSound = (kind, id) => sounds.block(kind, id);
+editor.onProgress = (p) => hud.setProgress(p);
+// Survival: broken blocks go into the inventory, placed ones are used up
+editor.onBroken = (id, held) => {
+  if (game.creative) return;
+  const drop = blockDrop(id, held);
+  if (drop) inventory.add(drop);
+};
+editor.onPlaced = () => {
+  if (!game.creative) inventory.takeOne(hud.selected);
+};
 
-// Crosshair and hotbar; the selected slot is what right click places
-const hud = new Hud(atlas.image, () => player.locked);
-editor.selectedBlock = () => hud.selectedBlock();
+// Start menu, inventory and crafting (E), death screen
+const screens = new Screens({ player, inventory, game, hud, atlas: atlas.image, sounds });
+game.onDeath = () => screens.die();
+inventory.onChange(() => saves.scheduleSave());
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -83,23 +107,13 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Show the start overlay whenever the pointer is not locked
-const overlay = document.getElementById('overlay');
-overlay.addEventListener('click', () => {
-  sounds.unlock(); // audio may only start from a click
-  player.start();
-});
-renderer.domElement.addEventListener('click', () => player.start());
+renderer.domElement.addEventListener('click', () => screens.state === 'playing' && player.start());
 document.getElementById('reset').addEventListener('click', (e) => {
   e.stopPropagation(); // don't start playing
   if (!confirm('Start a new world? Your saved changes will be lost.')) return;
   saves.clear();
   location.reload();
 });
-player.onLockChange = (locked) => {
-  overlay.style.display = locked ? 'none' : 'flex';
-  document.body.classList.toggle('drag-mode', locked && player.dragMode);
-};
 
 // T skips ahead an eighth of a day, to see sunsets and nights sooner; M mutes
 window.addEventListener('keydown', (e) => {
@@ -110,7 +124,7 @@ window.addEventListener('keydown', (e) => {
 
 // Dev-only hook for automated checks
 if (import.meta.env.DEV) {
-  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky, sounds };
+  window.__game = { player, scene, world, selector, editor, chunkMeshes, loader, hud, saves, sky, sounds, inventory, game, screens };
   window.__debug = () => ({ pos: player.position.toArray().map((v) => +v.toFixed(2)), onGround: player.onGround, target: selector.target?.block ?? null, chunks: world.chunks.size, meshes: chunkMeshes.meshes.size, builds: chunkMeshes.builds, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 }
 
@@ -126,6 +140,8 @@ renderer.setAnimationLoop((now) => {
   const cam = camera.position;
   sky.update(Math.min(dt, 0.1), camera, world.isWater(Math.floor(cam.x), Math.floor(cam.y), Math.floor(cam.z)));
   selector.update();
+  editor.update(Math.min(dt, 0.1));
+  game.update(Math.min(dt, 0.1));
   chunkMeshes.flush();
   renderer.render(scene, camera);
 });
